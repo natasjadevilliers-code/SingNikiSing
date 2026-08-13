@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#111827" />
-  <title>SingWise — Vocal Coach</title>
+  <title>SingNikiSing — Learn to Sing</title>
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -12,59 +12,85 @@
   <div class="app-shell">
     <header class="topbar">
       <div>
-        <div class="eyebrow">YOUR PERSONAL VOCAL COACH</div>
-        <h1>SingWise</h1>
+        <div class="eyebrow">LEARN • PRACTISE • SING</div>
+        <h1>SingNikiSing</h1>
       </div>
-      <button id="micBtn" class="primary">Enable microphone</button>
+      <div class="top-actions">
+        <label class="volume-control">App volume
+          <input id="appVolume" type="range" min="20" max="100" value="100" />
+        </label>
+        <button id="micBtn" class="primary">Enable microphone</button>
+      </div>
     </header>
 
     <nav class="tabs" id="tabs">
-      <button class="tab active" data-screen="home">Home</button>
-      <button class="tab" data-screen="daily">Daily Practice</button>
+      <button class="tab active" data-screen="home">For You</button>
+      <button class="tab" data-screen="daily">Practice</button>
       <button class="tab" data-screen="pitch">Pitch</button>
-      <button class="tab" data-screen="range">Range</button>
-      <button class="tab" data-screen="warmups">Warm-ups</button>
+      <button class="tab" data-screen="range">My Voice</button>
+      <button class="tab" data-screen="warmups">Exercises</button>
       <button class="tab" data-screen="ear">Ear</button>
       <button class="tab" data-screen="songs">Songs</button>
-      <button class="tab" data-screen="progress">Progress</button>
+      <button class="tab" data-screen="progress">Me</button>
     </nav>
 
     <main>
+
       <section class="screen active" id="home">
-        <div class="hero card">
+        <div class="welcome-card">
           <div>
-            <div class="eyebrow">DAILY TRAINING</div>
-            <h2>Train the voice you actually have.</h2>
-            <p>SingWise listens to your pitch, learns your comfortable range, and adapts exercises and song keys to you.</p>
-            <div class="hero-actions">
-              <button class="primary" data-go="range">Find my vocal range</button>
-              <button class="secondary" data-go="daily">Start today’s workout</button>
-            </div>
+            <div class="eyebrow">TODAY</div>
+            <h2>Ready to sing?</h2>
+            <p>Your practice adapts to your voice. Start with a short guided session or jump into a song.</p>
           </div>
-          <div class="score-ring">
-            <div><span id="homeScore">—</span><small>pitch score</small></div>
+          <div class="avatar-note">♪</div>
+        </div>
+
+        <div class="home-actions">
+          <button class="big-action purple" data-go="daily">
+            <span class="action-icon">▶</span>
+            <span><b>Daily practice</b><small>Warm up, train, sing</small></span>
+          </button>
+          <button class="big-action pink" data-go="songs">
+            <span class="action-icon">♫</span>
+            <span><b>Sing a song</b><small>Matched to your voice</small></span>
+          </button>
+          <button class="big-action blue" data-go="range">
+            <span class="action-icon">↕</span>
+            <span><b>Check my voice</b><small>Find your comfortable range</small></span>
+          </button>
+        </div>
+
+        <div class="card path-card">
+          <div class="path-head">
+            <div>
+              <div class="eyebrow">YOUR LEARNING PATH</div>
+              <h3>Build confidence step by step</h3>
+            </div>
+            <div class="level-pill">Level <span id="homeLevel">1</span></div>
+          </div>
+          <div class="learning-path">
+            <div class="path-node done"><span>1</span><div><b>Find your voice</b><small>Comfortable range</small></div></div>
+            <div class="path-line"></div>
+            <div class="path-node current"><span>2</span><div><b>Match the note</b><small>Pitch control</small></div></div>
+            <div class="path-line"></div>
+            <div class="path-node"><span>3</span><div><b>Move between notes</b><small>Agility & resonance</small></div></div>
+            <div class="path-line"></div>
+            <div class="path-node"><span>4</span><div><b>Sing full phrases</b><small>Breath & song work</small></div></div>
           </div>
         </div>
 
         <div class="grid three">
-          <div class="card stat"><span>Comfortable range</span><strong id="homeRange">Not tested</strong></div>
-          <div class="card stat"><span>Practice streak</span><strong id="homeStreak">0 days</strong></div>
-          <div class="card stat"><span>Sessions</span><strong id="homeSessions">0</strong></div>
+          <div class="card stat soft"><span>My range</span><strong id="homeRange">Not tested</strong></div>
+          <div class="card stat soft"><span>Streak</span><strong id="homeStreak">0 days</strong></div>
+          <div class="card stat soft"><span>Best pitch</span><strong id="homeScore">—</strong></div>
         </div>
 
-        <div class="card">
-          <h3>Recommended 15-minute session</h3>
-          <div class="routine">
-            <div><b>1. Release</b><span>1 min</span><small>Jaw, shoulders, silent breath</small></div>
-            <div><b>2. SOVT warm-up</b><span>3 min</span><small>Lip trill / straw-like “vv” sirens</small></div>
-            <div><b>3. Resonance</b><span>3 min</span><small>NG → vowel, gentle 5-note patterns</small></div>
-            <div><b>4. Pitch control</b><span>4 min</span><small>Target notes matched to your range</small></div>
-            <div><b>5. Song work</b><span>4 min</span><small>Phrase-by-phrase, in your best key</small></div>
-          </div>
-          <p class="note">Exercises should feel easy and never painful. Stop if you feel pain, persistent hoarseness, or throat strain.</p>
+        <div class="tip-card">
+          <div class="tip-icon">💡</div>
+          <div><b>Today’s tip</b><p>Easy singing beats loud singing. If a note feels forced, change the key rather than pushing for it.</p></div>
         </div>
       </section>
-
 
       <section class="screen" id="daily">
         <div class="card daily-hero">
@@ -127,6 +153,10 @@
               <div class="cents-labels"><span>flat</span><span>in tune</span><span>sharp</span></div>
               <div class="meter"><div class="meter-center"></div><div id="needle" class="needle"></div></div>
             </div>
+            <div class="note-lane">
+              <div class="lane-target"></div>
+              <div id="laneDot" class="lane-dot"></div>
+            </div>
             <div class="feedback" id="pitchFeedback">Enable the microphone and sing a comfortable note.</div>
           </div>
 
@@ -166,7 +196,17 @@
             <button class="secondary" id="rangeCantMatch">I can’t comfortably match this note</button>
             <button class="primary" id="saveRange">Save range</button>
           </div>
+          <div class="range-status-grid">
+            <div><small>Target</small><strong id="rangeTargetDisplay">—</strong></div>
+            <div><small>You are singing</small><strong id="rangeDetectedDisplay">—</strong></div>
+            <div><small>Match</small><strong id="rangeMatchDisplay">—</strong></div>
+          </div>
           <div class="feedback" id="rangeFeedback">Do the LOW test first, then the HIGH test. Sing only comfortably — never force a note.</div>
+        </div>
+        <div class="card voice-profile-card">
+          <div class="eyebrow">YOUR VOICE PROFILE</div>
+          <h3 id="voiceProfileTitle">Complete the range check</h3>
+          <p id="voiceProfileText">Once both ends are confirmed, SingNikiSing will shift exercises and songs into a more comfortable area for you.</p>
         </div>
         <div class="card">
           <h3>What the app does with your range</h3>
@@ -218,8 +258,8 @@
       <section class="screen" id="songs">
         <div class="card">
           <div class="eyebrow">SONG PRACTICE</div>
-          <h2>Practice songs in a key that fits you</h2>
-          <p>The built-in repertoire uses traditional/public-domain melodies and original practice songs so the app can legally include the notes.</p>
+          <h2>Songs that fit your voice</h2>
+          <p>Choose a song, let the app suggest a comfortable key, then practise the melody one phrase at a time.</p>
           <div class="song-toolbar">
             <label>Your key shift
               <select id="globalTranspose">

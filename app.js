@@ -19,6 +19,8 @@ const state = {
   rangeHoldFrames: 0,
   rangeLastMatched: null,
   rangeStartMidi: null,
+  rangeListenAfter: 0,
+  masterVolume: 1.0,
   earDirection: null,
   intervalTarget: null,
   progress: JSON.parse(localStorage.getItem('singwiseProgress') || '{"sessions":0,"bestPitch":0,"history":[],"rangeLow":null,"rangeHigh":null,"streak":0,"lastDate":null}'),
@@ -54,11 +56,23 @@ function refreshProgress(){
   $('#homeSessions').textContent = p.sessions || 0;
   $('#totalSessions').textContent = p.sessions || 0;
   $('#homeStreak').textContent = `${p.streak||0} day${p.streak===1?'':'s'}`;
+  const hl=$('#homeLevel'); if(hl) hl.textContent=Math.max(1,Math.min(20,Math.floor((p.sessions||0)/4)+1));
   $('#bestPitch').textContent = p.bestPitch ? `${p.bestPitch}%` : '—';
   $('#homeScore').textContent = p.bestPitch ? `${p.bestPitch}%` : '—';
   const rr = p.rangeLow!=null && p.rangeHigh!=null ? `${midiToName(p.rangeLow)}–${midiToName(p.rangeHigh)}` : 'Not tested';
   $('#homeRange').textContent = rr;
   $('#savedRange').textContent = rr;
+  const vpt=$('#voiceProfileTitle'), vpx=$('#voiceProfileText');
+  if(vpt && vpx){
+    if(p.rangeLow!=null && p.rangeHigh!=null){
+      const span=p.rangeHigh-p.rangeLow;
+      vpt.textContent=`Your comfortable range: ${rr}`;
+      vpx.textContent=`That spans ${span} semitones. Songs and exercises will be shifted to stay closer to this area.`;
+    } else {
+      vpt.textContent='Complete the range check';
+      vpx.textContent='Once both ends are confirmed, SingNikiSing will adapt songs and exercises to your comfortable voice.';
+    }
+  }
   $('#history').innerHTML = (p.history||[]).length ? p.history.map(h=>`<div class="history-item"><b>${h.label}</b><br><small>${h.date}${h.extra?` · ${h.extra}`:''}</small></div>`).join('') : '<p>No sessions yet.</p>';
 }
 
@@ -76,7 +90,7 @@ async function enableMic(){
     state.stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
     const src = state.audioCtx.createMediaStreamSource(state.stream);
     state.analyser = state.audioCtx.createAnalyser();
-    state.analyser.fftSize = 4096;
+    state.analyser.fftSize = 2048;
     src.connect(state.analyser);
     state.micEnabled = true;
     $('#micBtn').textContent = 'Microphone on';
@@ -89,24 +103,45 @@ async function enableMic(){
 $('#micBtn').onclick=enableMic;
 
 function autoCorrelate(buf, sampleRate){
-  let SIZE = buf.length, rms = 0;
-  for(let i=0;i<SIZE;i++) rms += buf[i]*buf[i];
-  rms = Math.sqrt(rms/SIZE);
-  if(rms < 0.01) return -1;
-  let r1=0,r2=SIZE-1,thres=.2;
-  for(let i=0;i<SIZE/2;i++){ if(Math.abs(buf[i])<thres){r1=i;break;} }
-  for(let i=1;i<SIZE/2;i++){ if(Math.abs(buf[SIZE-i])<thres){r2=SIZE-i;break;} }
-  buf = buf.slice(r1,r2); SIZE=buf.length;
-  const c=new Array(SIZE).fill(0);
-  for(let i=0;i<SIZE;i++) for(let j=0;j<SIZE-i;j++) c[i]+=buf[j]*buf[j+i];
-  let d=0; while(c[d]>c[d+1]) d++;
-  let max=-1,maxpos=-1;
-  for(let i=d;i<SIZE;i++) if(c[i]>max){max=c[i];maxpos=i;}
-  let T0=maxpos;
-  const x1=c[T0-1]||c[T0], x2=c[T0], x3=c[T0+1]||c[T0];
-  const a=(x1+x3-2*x2)/2, b=(x3-x1)/2;
-  if(a) T0 -= b/(2*a);
-  return sampleRate/T0;
+  // Fast normalized autocorrelation tuned for singing (~75–1000 Hz).
+  let rms=0;
+  for(let i=0;i<buf.length;i++) rms += buf[i]*buf[i];
+  rms=Math.sqrt(rms/buf.length);
+  if(rms<0.012) return -1;
+
+  const minLag=Math.floor(sampleRate/1000);
+  const maxLag=Math.min(Math.floor(sampleRate/75), buf.length-2);
+  let bestLag=-1, best=0;
+
+  // Use every second sample to reduce CPU load on phones.
+  for(let lag=minLag; lag<=maxLag; lag++){
+    let corr=0, normA=0, normB=0;
+    for(let i=0; i<buf.length-lag; i+=2){
+      const a=buf[i], b=buf[i+lag];
+      corr += a*b; normA += a*a; normB += b*b;
+    }
+    const denom=Math.sqrt(normA*normB) || 1;
+    const score=corr/denom;
+    if(score>best){best=score;bestLag=lag;}
+  }
+  if(bestLag<0 || best<0.55) return -1;
+
+  // Small parabolic refinement around the best lag.
+  const scoreAt=(lag)=>{
+    let corr=0,nA=0,nB=0;
+    for(let i=0;i<buf.length-lag;i+=2){
+      const a=buf[i],b=buf[i+lag];
+      corr+=a*b;nA+=a*a;nB+=b*b;
+    }
+    return corr/(Math.sqrt(nA*nB)||1);
+  };
+  let refined=bestLag;
+  if(bestLag>minLag && bestLag<maxLag){
+    const y1=scoreAt(bestLag-1), y2=best, y3=scoreAt(bestLag+1);
+    const denom=(y1-2*y2+y3);
+    if(Math.abs(denom)>1e-6) refined += 0.5*(y1-y3)/denom;
+  }
+  return sampleRate/refined;
 }
 
 let smoothMidi = [];
@@ -126,6 +161,7 @@ function pitchLoop(){
     $('#liveNote').textContent = midiToName(nearest);
     $('#liveFreq').textContent = `${f.toFixed(1)} Hz`;
     $('#needle').style.left = `${Math.max(0,Math.min(100,50+cents/2))}%`;
+    const lane=$('#laneDot'); if(lane) lane.style.left=`${Math.max(5,Math.min(95,50+cents/2))}%`;
     if(Math.abs(cents)<=10) $('#pitchFeedback').textContent='Excellent — centered on the note.';
     else if(cents<0) $('#pitchFeedback').textContent=`About ${Math.abs(cents).toFixed(0)} cents flat. Let the pitch rise slightly.`;
     else $('#pitchFeedback').textContent=`About ${cents.toFixed(0)} cents sharp. Release down slightly.`;
@@ -147,20 +183,47 @@ async function ensureAudio(){
   return state.audioCtx;
 }
 
-async function playTone(midi,duration=.65,delay=0){
-  const ctx = await ensureAudio();
-  const t = ctx.currentTime + delay;
-  const o = ctx.createOscillator(), g = ctx.createGain();
-  o.type='sine'; o.frequency.value=midiToFreq(midi);
-  g.gain.setValueAtTime(0.0001,t);
-  g.gain.exponentialRampToValueAtTime(.28,t+.03);
-  g.gain.exponentialRampToValueAtTime(.0001,t+duration);
-  o.connect(g).connect(ctx.destination); o.start(t); o.stop(t+duration+.05);
+async function playTone(midi,duration=.75,delay=0){
+  const ctx=await ensureAudio();
+  const t=ctx.currentTime+delay;
+  const master=ctx.createGain();
+  const compressor=ctx.createDynamicsCompressor();
+  compressor.threshold.value=-12;
+  compressor.knee.value=8;
+  compressor.ratio.value=4;
+  compressor.attack.value=.003;
+  compressor.release.value=.18;
+  master.gain.value=0.72*(state.masterVolume||1);
+  master.connect(compressor).connect(ctx.destination);
+
+  // Fundamental plus soft harmonics sounds much louder on a phone speaker
+  // than a single low sine wave.
+  const parts=[
+    {mult:1,type:'triangle',gain:.55},
+    {mult:2,type:'sine',gain:.22},
+    {mult:3,type:'sine',gain:.10}
+  ];
+  parts.forEach(p=>{
+    const o=ctx.createOscillator(), g=ctx.createGain();
+    o.type=p.type;
+    o.frequency.value=midiToFreq(midi)*p.mult;
+    g.gain.setValueAtTime(.0001,t);
+    g.gain.exponentialRampToValueAtTime(p.gain,t+.025);
+    g.gain.setValueAtTime(p.gain,t+Math.max(.04,duration-.12));
+    g.gain.exponentialRampToValueAtTime(.0001,t+duration);
+    o.connect(g).connect(master);
+    o.start(t); o.stop(t+duration+.04);
+  });
 }
-async function playPattern(midis, beat=.5){
+
+async function playPattern(midis,beat=.5){
   await ensureAudio();
-  midis.forEach((m,i)=>playTone(m,beat*.85,i*beat));
+  midis.forEach((m,i)=>playTone(m,beat*.82,i*beat));
 }
+
+$('#appVolume').addEventListener('input',e=>{
+  state.masterVolume=Math.max(.2,Math.min(1,Number(e.target.value)/100));
+});
 
 $('#playTarget').onclick=async()=>{ await ensureAudio(); playTone(state.targetMidi); };
 $('#newTarget').onclick=()=>{
@@ -213,6 +276,10 @@ async function startRange(which){
   startMidi = Math.max(48, Math.min(67, startMidi));
   state.rangeStartMidi=startMidi;
   state.rangeTarget=startMidi;
+  state.rangeListenAfter=Date.now()+1200;
+  $('#rangeTargetDisplay').textContent=midiToName(state.rangeTarget);
+  $('#rangeDetectedDisplay').textContent='—';
+  $('#rangeMatchDisplay').textContent='Listen';
 
   if(which==='low'){
     state.rangeLow=null;
@@ -225,12 +292,18 @@ async function startRange(which){
   }
 
   playTone(state.rangeTarget,.8);
+  state.rangeListenAfter=Date.now()+1150;
 }
 
 function replayRangeTarget(){
   if(state.testingRange && state.rangeTarget!=null){
+    state.rangeHoldFrames=0;
+    $('#rangeTargetDisplay').textContent=midiToName(state.rangeTarget);
+    $('#rangeDetectedDisplay').textContent='—';
+    $('#rangeMatchDisplay').textContent='Listen';
     playTone(state.rangeTarget,.8);
-    $('#rangeFeedback').textContent=`Target: ${midiToName(state.rangeTarget)}. Listen, then sing the same note.`;
+    state.rangeListenAfter=Date.now()+1150;
+    $('#rangeFeedback').textContent=`Listen to ${midiToName(state.rangeTarget)} first. When the sound stops, sing the same note and hold it.`;
   }else{
     $('#rangeFeedback').textContent='Start the LOW or HIGH guided test first.';
   }
@@ -238,14 +311,19 @@ function replayRangeTarget(){
 
 function observeRange(note,cents){
   if(!state.testingRange || state.rangeTarget==null) return;
+  if(Date.now() < (state.rangeListenAfter||0)) return;
+
+  $('#rangeDetectedDisplay').textContent=midiToName(note);
 
   // Score distance from the exact target, not merely the nearest detected note.
-  const distance = Math.abs((note-state.rangeTarget)*100 + cents);
+  const signedDistance=(note-state.rangeTarget)*100+cents;
+  const distance=Math.abs(signedDistance);
 
   if(distance <= 45){
     state.rangeHoldFrames++;
-    const pct = Math.max(0, Math.round(100-distance));
-    $('#rangeFeedback').textContent=`Matching ${midiToName(state.rangeTarget)} — ${pct}% centred. Keep holding…`;
+    const pct=Math.max(0,Math.round(100-distance));
+    $('#rangeMatchDisplay').textContent=`${pct}%`;
+    $('#rangeFeedback').textContent=`Yes — that is ${midiToName(state.rangeTarget)}. Keep holding it steadily…`;
 
     // Roughly ~0.7–1 sec depending on device callback rate.
     if(state.rangeHoldFrames >= 12){
@@ -276,15 +354,20 @@ function observeRange(note,cents){
 
       setTimeout(()=>{
         if(state.testingRange){
-          $('#rangeFeedback').textContent=`Good. Next target: ${midiToName(state.rangeTarget)}. Copy it only if it still feels comfortable.`;
+          $('#rangeTargetDisplay').textContent=midiToName(state.rangeTarget);
+          $('#rangeDetectedDisplay').textContent='—';
+          $('#rangeMatchDisplay').textContent='Listen';
+          $('#rangeFeedback').textContent=`Good. Now listen to ${midiToName(state.rangeTarget)}. Sing only after the reference sound stops.`;
           playTone(state.rangeTarget,.8);
+          state.rangeListenAfter=Date.now()+1150;
         }
       },350);
     }
   }else{
     state.rangeHoldFrames=Math.max(0,state.rangeHoldFrames-1);
-    const direction = ((note-state.rangeTarget)*100+cents) < 0 ? 'below' : 'above';
-    $('#rangeFeedback').textContent=`Target ${midiToName(state.rangeTarget)}. You are ${Math.round(distance)} cents ${direction} it. Listen again if needed.`;
+    const direction=signedDistance<0?'below':'above';
+    $('#rangeMatchDisplay').textContent=distance<100?'Close':'Try again';
+    $('#rangeFeedback').textContent=`Target ${midiToName(state.rangeTarget)}. You are singing ${midiToName(note)} (${Math.round(distance)} cents ${direction}). Adjust gently or replay the target.`;
   }
 }
 
@@ -298,6 +381,8 @@ function finishCurrentRangeSide(){
   state.testingRange=null;
   state.rangeTarget=null;
   state.rangeHoldFrames=0;
+  $('#rangeTargetDisplay').textContent='—';
+  $('#rangeMatchDisplay').textContent='Finished';
 
   if(side==='low'){
     if(state.rangeLow==null){
@@ -435,7 +520,7 @@ const songs = [
  {id:'ode',title:'Ode to Joy',source:'Beethoven melody — public domain',key:'C',baseRoot:60, melody:[4,4,5,7,7,5,4,2,0,0,2,4,4,2,2], rhythm:Array(15).fill(1)},
  {id:'scarborough',title:'Scarborough Fair',source:'Traditional',key:'D minor',baseRoot:62, melody:[0,0,7,7,5,3,2,0,3,5,7,5,3,2,0], rhythm:[1,1,2,1,1,1,2,1,1,1,1,1,1,1,3]},
  {id:'when',title:'When the Saints Go Marching In',source:'Traditional',key:'C',baseRoot:60, melody:[0,4,5,7,0,4,5,7,0,4,5,7,4,0,4,2], rhythm:Array(16).fill(1)},
- {id:'original1',title:'Open Sky',source:'Original SingWise exercise song',key:'C',baseRoot:60, melody:[0,2,4,7,5,4,2,0,4,5,7,9,7,5,4,2,0], rhythm:[1,1,1,2,1,1,1,2,1,1,1,2,1,1,1,1,3]}
+ {id:'original1',title:'Open Sky',source:'Original SingNikiSing exercise song',key:'C',baseRoot:60, melody:[0,2,4,7,5,4,2,0,4,5,7,9,7,5,4,2,0], rhythm:[1,1,1,2,1,1,1,2,1,1,1,2,1,1,1,1,3]}
 ];
 
 function songMinMax(song,trans=0){
@@ -485,7 +570,7 @@ function renderSongs(){
 renderSongs();
 $('#globalTranspose').onchange=renderSongs;
 $('#autoKey').onclick=()=>{
-  if(state.progress.rangeLow==null){ alert('Run the vocal range test first so SingWise knows your comfortable range.'); return; }
+  if(state.progress.rangeLow==null){ alert('Run the vocal range test first so SingNikiSing knows your comfortable range.'); return; }
   // Set a compromise based on the first selected song; per-song button is more precise.
   $('#globalTranspose').value=bestTranspose(songs[0]);
   renderSongs();
@@ -681,7 +766,7 @@ function dailyLiveSample(note,cents){
 }
 
 $('#resetProgress').onclick=()=>{
-  if(confirm('Reset all saved SingWise progress on this device?')){
+  if(confirm('Reset all saved SingNikiSing progress on this device?')){
     state.progress={sessions:0,bestPitch:0,history:[],rangeLow:null,rangeHigh:null,streak:0,lastDate:null};
     saveProgress();
   }

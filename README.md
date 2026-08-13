@@ -39,3 +39,21 @@ This is a practice tool, not a medical or clinical voice assessment. Vocal exerc
 - Points awarded per completed step
 - Session totals saved into Progress
 - Recordings are kept only as temporary in-browser session audio unless the user explicitly downloads/saves them
+
+
+## v4 fixes
+- Faster phone-friendly pitch detection
+- Guided range test ignores its own reference note while the phone speaker is playing
+- Clear target / detected note / match displays
+- Stronger multi-harmonic reference tone designed to be more audible on phone speakers
+- In-app master volume slider
+
+
+## v5 UI redesign
+- Friendlier progression-based home screen
+- Large action cards for Daily Practice, Songs, and Voice Check
+- Learning path / level display
+- Cleaner light visual system
+- Real-time pitch note lane
+- More prominent personalised voice profile
+- Keeps the v4 audio and guided range-test fixes
