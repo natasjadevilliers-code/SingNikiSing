@@ -15,6 +15,10 @@ const state = {
   rangeHigh: null,
   testingRange: null,
   rangeObserved: [],
+  rangeTarget: null,
+  rangeHoldFrames: 0,
+  rangeLastMatched: null,
+  rangeStartMidi: null,
   earDirection: null,
   intervalTarget: null,
   progress: JSON.parse(localStorage.getItem('singwiseProgress') || '{"sessions":0,"bestPitch":0,"history":[],"rangeLow":null,"rangeHigh":null,"streak":0,"lastDate":null}'),
@@ -184,40 +188,158 @@ function scoreTarget(note,cents){
   }
 }
 
+
 $('#startLow').onclick=()=>startRange('low');
 $('#startHigh').onclick=()=>startRange('high');
-function startRange(which){
-  if(!state.micEnabled){ enableMic(); }
-  state.testingRange=which; state.rangeObserved=[];
-  $('#rangeFeedback').textContent = which==='low'
-    ? 'Sing downward gently in small steps. Hold each comfortable note for about 1 second. Stop before it becomes breathy, fry-like, or forced.'
-    : 'Sing upward gently in small steps. Use an easy “oo” or lip trill. Stop before you push, yell, squeeze or lose control.';
-}
-function observeRange(note,cents){
-  if(!state.testingRange || Math.abs(cents)>35) return;
-  state.rangeObserved.push(note);
-  if(state.rangeObserved.length>100) state.rangeObserved.shift();
-  const counts={}; state.rangeObserved.forEach(n=>counts[n]=(counts[n]||0)+1);
-  const stable=Object.keys(counts).filter(n=>counts[n]>=3).map(Number);
-  if(!stable.length)return;
-  if(state.testingRange==='low'){
-    state.rangeLow=Math.min(...stable);
-    $('#lowRange').textContent=midiToName(state.rangeLow);
-  } else {
-    state.rangeHigh=Math.max(...stable);
-    $('#highRange').textContent=midiToName(state.rangeHigh);
+$('#replayRangeNote').onclick=()=>replayRangeTarget();
+$('#rangeCantMatch').onclick=()=>finishCurrentRangeSide();
+
+async function startRange(which){
+  if(!state.micEnabled) await enableMic();
+  await ensureAudio();
+
+  state.testingRange=which;
+  state.rangeObserved=[];
+  state.rangeHoldFrames=0;
+  state.rangeLastMatched=null;
+
+  // Start around an easy central note. If a saved range exists, use its centre.
+  const savedLow = state.progress.rangeLow, savedHigh = state.progress.rangeHigh;
+  let startMidi = (savedLow!=null && savedHigh!=null)
+    ? Math.round((savedLow+savedHigh)/2)
+    : 60; // C4 is a neutral default starting point.
+
+  // Keep the opening target within a broadly singable test area.
+  startMidi = Math.max(48, Math.min(67, startMidi));
+  state.rangeStartMidi=startMidi;
+  state.rangeTarget=startMidi;
+
+  if(which==='low'){
+    state.rangeLow=null;
+    $('#lowRange').textContent='—';
+    $('#rangeFeedback').textContent=`LOW test: listen to ${midiToName(state.rangeTarget)}, then copy it. Hold it steadily for about 1 second.`;
+  }else{
+    state.rangeHigh=null;
+    $('#highRange').textContent='—';
+    $('#rangeFeedback').textContent=`HIGH test: listen to ${midiToName(state.rangeTarget)}, then copy it gently. Hold it steadily for about 1 second.`;
   }
-  if(state.rangeLow!=null&&state.rangeHigh!=null){
+
+  playTone(state.rangeTarget,.8);
+}
+
+function replayRangeTarget(){
+  if(state.testingRange && state.rangeTarget!=null){
+    playTone(state.rangeTarget,.8);
+    $('#rangeFeedback').textContent=`Target: ${midiToName(state.rangeTarget)}. Listen, then sing the same note.`;
+  }else{
+    $('#rangeFeedback').textContent='Start the LOW or HIGH guided test first.';
+  }
+}
+
+function observeRange(note,cents){
+  if(!state.testingRange || state.rangeTarget==null) return;
+
+  // Score distance from the exact target, not merely the nearest detected note.
+  const distance = Math.abs((note-state.rangeTarget)*100 + cents);
+
+  if(distance <= 45){
+    state.rangeHoldFrames++;
+    const pct = Math.max(0, Math.round(100-distance));
+    $('#rangeFeedback').textContent=`Matching ${midiToName(state.rangeTarget)} — ${pct}% centred. Keep holding…`;
+
+    // Roughly ~0.7–1 sec depending on device callback rate.
+    if(state.rangeHoldFrames >= 12){
+      const matched = state.rangeTarget;
+      state.rangeLastMatched = matched;
+
+      if(state.testingRange==='low'){
+        state.rangeLow = matched;
+        $('#lowRange').textContent = midiToName(matched);
+        state.rangeTarget = matched - 1;
+      }else{
+        state.rangeHigh = matched;
+        $('#highRange').textContent = midiToName(matched);
+        state.rangeTarget = matched + 1;
+      }
+
+      state.rangeHoldFrames=0;
+
+      if(state.rangeLow!=null && state.rangeHigh!=null){
+        $('#rangeSpan').textContent=`${state.rangeHigh-state.rangeLow} semitones`;
+      }
+
+      // Hard safety boundaries to prevent a runaway test.
+      if(state.rangeTarget < 36 || state.rangeTarget > 84){
+        finishCurrentRangeSide();
+        return;
+      }
+
+      setTimeout(()=>{
+        if(state.testingRange){
+          $('#rangeFeedback').textContent=`Good. Next target: ${midiToName(state.rangeTarget)}. Copy it only if it still feels comfortable.`;
+          playTone(state.rangeTarget,.8);
+        }
+      },350);
+    }
+  }else{
+    state.rangeHoldFrames=Math.max(0,state.rangeHoldFrames-1);
+    const direction = ((note-state.rangeTarget)*100+cents) < 0 ? 'below' : 'above';
+    $('#rangeFeedback').textContent=`Target ${midiToName(state.rangeTarget)}. You are ${Math.round(distance)} cents ${direction} it. Listen again if needed.`;
+  }
+}
+
+function finishCurrentRangeSide(){
+  if(!state.testingRange){
+    $('#rangeFeedback').textContent='Start a guided range test first.';
+    return;
+  }
+
+  const side=state.testingRange;
+  state.testingRange=null;
+  state.rangeTarget=null;
+  state.rangeHoldFrames=0;
+
+  if(side==='low'){
+    if(state.rangeLow==null){
+      $('#rangeFeedback').textContent='No low note was confirmed yet. Try the LOW test again and match the first target before stopping.';
+    }else{
+      $('#rangeFeedback').textContent=`Low side finished at ${midiToName(state.rangeLow)}. Now start the HIGH test.`;
+    }
+  }else{
+    if(state.rangeHigh==null){
+      $('#rangeFeedback').textContent='No high note was confirmed yet. Try the HIGH test again and match the first target before stopping.';
+    }else{
+      $('#rangeFeedback').textContent=`High side finished at ${midiToName(state.rangeHigh)}. If both sides look right, tap Save range.`;
+    }
+  }
+
+  if(state.rangeLow!=null && state.rangeHigh!=null){
     $('#rangeSpan').textContent=`${state.rangeHigh-state.rangeLow} semitones`;
   }
 }
+
 $('#saveRange').onclick=()=>{
-  if(state.rangeLow==null || state.rangeHigh==null){ $('#rangeFeedback').textContent='Complete both low and high tests first.'; return; }
-  if(state.rangeHigh-state.rangeLow<8){ $('#rangeFeedback').textContent='That span looks unusually small. Try both tests again using gentle connected singing.'; return; }
-  state.progress.rangeLow=state.rangeLow; state.progress.rangeHigh=state.rangeHigh;
+  if(state.rangeLow==null || state.rangeHigh==null){
+    $('#rangeFeedback').textContent='Complete both the LOW and HIGH guided tests first.';
+    return;
+  }
+  if(state.rangeHigh <= state.rangeLow){
+    $('#rangeFeedback').textContent='Those results do not look valid. Please repeat both tests.';
+    return;
+  }
+  const span=state.rangeHigh-state.rangeLow;
+  if(span<7){
+    $('#rangeFeedback').textContent='That range looks unusually narrow. Repeat the tests gently before saving.';
+    return;
+  }
+
+  state.progress.rangeLow=state.rangeLow;
+  state.progress.rangeHigh=state.rangeHigh;
   state.testingRange=null;
-  markSession('Vocal range test',`${midiToName(state.rangeLow)}–${midiToName(state.rangeHigh)}`);
-  $('#rangeFeedback').textContent='Range saved. Exercises and key suggestions will now adapt to it.';
+  state.rangeTarget=null;
+
+  markSession('Vocal range test',`${midiToName(state.rangeLow)}–${midiToName(state.rangeHigh)} · ${span} semitones`);
+  $('#rangeFeedback').textContent=`Saved: ${midiToName(state.rangeLow)}–${midiToName(state.rangeHigh)}. Song-key suggestions and exercises will now adapt to this range.`;
 };
 
 const exercises = [
