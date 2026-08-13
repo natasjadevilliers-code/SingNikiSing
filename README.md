@@ -75,3 +75,12 @@ This is a practice tool, not a medical or clinical voice assessment. Vocal exerc
 - Visible target / detected note / live pitch meter
 - Explicit iOS playback vs play-and-record audio-session switching where supported
 - Microphone released during coach speech and reference tones to improve iPhone playback volume and prevent self-detection
+
+
+## v8 Real Audio
+- Replaced browser-generated coach speech with prerecorded WAV prompt files
+- Replaced live Web Audio reference notes in the voice check with 49 prerecorded WAV tone files
+- Uses one HTMLAudioElement for playback on iPhone
+- Microphone is fully released before every coach prompt/reference note
+- Listening resumes only after playback has ended
+- Speaker Test now plays a real prerecorded sentence followed by a real audio tone file

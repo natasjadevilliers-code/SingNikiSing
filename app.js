@@ -316,6 +316,65 @@ function scoreTarget(note,cents){
 
 
 
+
+// ---------- Reliable prerecorded audio player ----------
+function coachAudioEl(){ return $('#coachAudio'); }
+
+async function playAudioFile(src){
+  await stopMicForPlayback();
+  setAudioSession('playback');
+  const a=coachAudioEl();
+  if(!a) throw new Error('Audio element missing');
+  try{ a.pause(); }catch(e){}
+  a.currentTime=0;
+  a.src=src;
+  a.volume=1;
+  await new Promise((resolve,reject)=>{
+    const done=()=>{ cleanup(); resolve(); };
+    const fail=()=>{ cleanup(); reject(new Error('Audio playback failed')); };
+    const cleanup=()=>{
+      a.removeEventListener('ended',done);
+      a.removeEventListener('error',fail);
+    };
+    a.addEventListener('ended',done,{once:true});
+    a.addEventListener('error',fail,{once:true});
+    const p=a.play();
+    if(p && p.catch) p.catch(fail);
+  });
+}
+
+async function playCoachFile(name){
+  voiceTest.speaking=true;
+  $('#voiceOrb').className='voice-orb speaking';
+  $('#voiceListeningText').textContent='Coach speaking';
+  try{
+    await playAudioFile(`audio/${name}.wav`);
+  }finally{
+    voiceTest.speaking=false;
+    $('#voiceOrb').className='voice-orb';
+  }
+}
+
+async function playReferenceFile(midi){
+  voiceTest.speaking=true;
+  $('#voiceOrb').className='voice-orb speaking';
+  $('#voiceListeningText').textContent='Listen';
+  try{
+    await playAudioFile(`audio/tone_${Math.round(midi)}.wav`);
+  }finally{
+    voiceTest.speaking=false;
+    $('#voiceOrb').className='voice-orb';
+  }
+}
+
+async function returnToListening(){
+  setAudioSession('play-and-record');
+  await new Promise(r=>setTimeout(r,260));
+  await enableMic(true);
+  $('#voiceOrb').className='voice-orb listening';
+  $('#voiceListeningText').textContent='Listening to you';
+}
+
 // ---------------- Guided Voice Check ----------------
 const voiceTest = {
   active:false,
@@ -348,49 +407,32 @@ function chooseCoachVoice(){
       || null;
 }
 
-async function coachSpeak(text, next=null){
+async function coachSpeak(text, next=null, audioKey=null){
   voiceTest.promptText=text;
-  voiceTest.speaking=true;
-  $('#voiceOrb').className='voice-orb speaking';
-  $('#voiceListeningText').textContent='Coach speaking';
-  await stopMicForPlayback();
-  setAudioSession('playback');
-
-  return new Promise(resolve=>{
-    try{ speechSynthesis.cancel(); }catch(e){}
-    const u=new SpeechSynthesisUtterance(text);
-    const voice=chooseCoachVoice();
-    if(voice) u.voice=voice;
-    u.rate=.94;
-    u.pitch=1.02;
-    u.volume=1;
-    const done=async()=>{
-      voiceTest.speaking=false;
-      $('#voiceOrb').className='voice-orb';
-      $('#voiceListeningText').textContent='Get ready…';
-      if(next) await next();
-      resolve();
-    };
-    u.onend=done;
-    u.onerror=done;
-    speechSynthesis.speak(u);
-  });
+  if(audioKey){
+    await playCoachFile(audioKey);
+  }else{
+    // Fallback only; the guided test itself uses prerecorded audio files.
+    try{
+      await stopMicForPlayback();
+      setAudioSession('playback');
+      const u=new SpeechSynthesisUtterance(text);
+      u.rate=.94; u.pitch=1.02; u.volume=1;
+      await new Promise(resolve=>{
+        u.onend=resolve; u.onerror=resolve;
+        speechSynthesis.cancel(); speechSynthesis.speak(u);
+      });
+    }catch(e){}
+  }
+  if(next) await next();
 }
 
 async function coachPlayNote(midi, instructionAfter='Your turn.'){
-  await stopMicForPlayback();
-  setAudioSession('playback');
-  $('#voiceOrb').className='voice-orb speaking';
-  $('#voiceListeningText').textContent='Listen';
-  await ensureAudio();
-  await playToneRaw(midi,.95);
-  await new Promise(r=>setTimeout(r,180));
-  setAudioSession('play-and-record');
-  await resumeMicAfterPlayback(320);
+  await playReferenceFile(midi);
+  await playCoachFile('your_turn');
+  await returnToListening();
   voiceTest.holdFrames=0;
   voiceTest.retries=0;
-  $('#voiceOrb').className='voice-orb listening';
-  $('#voiceListeningText').textContent='Listening to you';
   $('#voiceCoachMessage').textContent=instructionAfter;
 }
 
@@ -426,7 +468,8 @@ async function beginVoiceCheck(){
       setAudioSession('play-and-record');
       await enableMic(true);
       setTimeout(()=>startHumIntro(),2600);
-    }
+    },
+    'intro'
   );
 }
 
@@ -444,7 +487,8 @@ async function startHumIntro(){
       $('#voiceListeningText').textContent='Hum now';
       setAudioSession('play-and-record');
       await enableMic(true);
-    }
+    },
+    'hum'
   );
 }
 
@@ -471,7 +515,8 @@ async function startLowGuided(){
   voiceStage('STEP 3 OF 4','Let’s find your low notes','');
   await coachSpeak(
     "Nice. Now we’ll move downward one note at a time. I’ll play a note, then you copy it. Stop when the next note no longer feels comfortable.",
-    async()=>presentRangeTarget('low')
+    async()=>presentRangeTarget('low'),
+    'low_intro'
   );
 }
 
@@ -484,7 +529,8 @@ async function startHighGuided(){
   voiceStage('STEP 4 OF 4','Now your high notes','');
   await coachSpeak(
     "Good. Now we’ll go upward. Keep the sound light. Do not get louder to reach the note. If it feels tight, that is where we stop.",
-    async()=>presentRangeTarget('high')
+    async()=>presentRangeTarget('high'),
+    'high_intro'
   );
 }
 
@@ -524,16 +570,18 @@ async function handleRangeMatch(note,cents){
         voiceTest.target=matched-1;
         voiceProgress(Math.min(58,30+(voiceTest.startingMidi-voiceTest.target)*4));
         await coachSpeak(
-          Math.random()>.5 ? "Good. Let’s try one step lower." : "Nice. One more step down.",
-          async()=>presentRangeTarget('low')
+          "Good. Let’s try one step lower.",
+          async()=>presentRangeTarget('low'),
+          'good_lower'
         );
       }else{
         voiceTest.high=matched;
         voiceTest.target=matched+1;
         voiceProgress(Math.min(94,65+(voiceTest.target-voiceTest.startingMidi)*4));
         await coachSpeak(
-          Math.random()>.5 ? "Good. Let’s try one step higher." : "Nice. One more step up.",
-          async()=>presentRangeTarget('high')
+          "Good. Let’s try one step higher.",
+          async()=>presentRangeTarget('high'),
+          'good_higher'
         );
       }
     }
@@ -556,18 +604,18 @@ async function voiceCantMatch(){
       await coachSpeak("No problem. Let’s restart the low section from your comfortable middle note.", async()=>{
         voiceTest.target=voiceTest.startingMidi;
         presentRangeTarget('low');
-      });
+      }, 'retry_low');
     }else{
-      await coachSpeak("Perfect. That means we found the comfortable bottom of your voice. Now let’s check the top.", startHighGuided);
+      await coachSpeak("Perfect. That means we found the comfortable bottom of your voice. Now let’s check the top.", startHighGuided, 'low_done');
     }
   }else if(voiceTest.stage==='high'){
     if(voiceTest.high==null){
       await coachSpeak("No problem. Let’s restart the high section from your comfortable middle note.", async()=>{
         voiceTest.target=voiceTest.startingMidi;
         presentRangeTarget('high');
-      });
+      }, 'retry_high');
     }else{
-      await coachSpeak("Great. I’ve got what I need. Let me show you your comfortable range.", showVoiceResult);
+      await coachSpeak("Great. I’ve got what I need. Let me show you your comfortable range.", showVoiceResult, 'result');
     }
   }
 }
@@ -603,7 +651,9 @@ function saveVoiceResult(){
 }
 
 async function replayCoach(){
-  if(voiceTest.promptText) await coachSpeak(voiceTest.promptText);
+  const map={intro:'intro',hum:'hum',low:'low_intro',high:'high_intro'};
+  const key=map[voiceTest.stage];
+  if(key) await playCoachFile(key);
 }
 async function replayVoiceNote(){
   if(voiceTest.target!=null) await presentRangeTarget(voiceTest.stage);
@@ -979,13 +1029,21 @@ if('serviceWorker' in navigator){
 }
 
 
+
 const spk=$('#speakerTest');
 if(spk){
   spk.onclick=async()=>{
-    await stopMicForPlayback();
-    setAudioSession('playback');
-    await coachSpeak("This is the Sing Niki Sing speaker test.");
-    await ensureAudio();
-    await playToneRaw(69,1.0);
+    try{
+      spk.disabled=true;
+      spk.textContent='Playing…';
+      await playAudioFile('audio/speaker_test.wav');
+      await playAudioFile('audio/tone_69.wav');
+      spk.textContent='Test speaker';
+      spk.disabled=false;
+    }catch(e){
+      spk.textContent='Tap again';
+      spk.disabled=false;
+      alert('The browser blocked audio playback. Tap the button again after making sure the iPhone is not in Silent Mode and media volume is turned up.');
+    }
   };
 }
