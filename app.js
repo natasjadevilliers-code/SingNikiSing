@@ -83,21 +83,64 @@ function showScreen(id){
   $$('.screen').forEach(x=>x.classList.toggle('active',x.id===id));
 }
 
-async function enableMic(){
+
+async function stopMicForPlayback(){
+  setAudioSession('playback');
+  if(state.stream){
+    try{
+      state.stream.getTracks().forEach(t=>t.stop());
+    }catch(e){}
+  }
+  state.stream=null;
+  state.analyser=null;
+  state.micEnabled=false;
+  const mb=$('#micBtn');
+  if(mb){
+    mb.textContent='Listening paused';
+    mb.disabled=false;
+  }
+  // Give iOS a moment to leave the recording audio route.
+  await new Promise(r=>setTimeout(r,180));
+}
+
+async function resumeMicAfterPlayback(delayMs=250){
+  await new Promise(r=>setTimeout(r,delayMs));
+  setAudioSession('play-and-record');
+  try{
+    await enableMic(true);
+  }catch(e){}
+}
+
+async function enableMic(quiet=false){
   try{
     state.audioCtx ||= new (window.AudioContext||window.webkitAudioContext)();
     await state.audioCtx.resume();
-    state.stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+    if(state.stream){
+      try{ state.stream.getTracks().forEach(t=>t.stop()); }catch(e){}
+    }
+    state.stream = await navigator.mediaDevices.getUserMedia({
+      audio:{
+        echoCancellation:false,
+        noiseSuppression:false,
+        autoGainControl:false,
+        channelCount:1
+      }
+    });
     const src = state.audioCtx.createMediaStreamSource(state.stream);
     state.analyser = state.audioCtx.createAnalyser();
     state.analyser.fftSize = 2048;
     src.connect(state.analyser);
     state.micEnabled = true;
-    $('#micBtn').textContent = 'Microphone on';
+    $('#micBtn').textContent = 'Listening on';
     $('#micBtn').disabled = true;
     requestAnimationFrame(pitchLoop);
+    return true;
   }catch(e){
-    alert('Microphone access is needed for live pitch coaching. Open the app over HTTPS and allow microphone permission.');
+    state.micEnabled=false;
+    if(!quiet){
+      alert('Microphone access is needed for live pitch coaching. Open the app over HTTPS and allow microphone permission.');
+    }
+    return false;
   }
 }
 $('#micBtn').onclick=enableMic;
@@ -146,7 +189,10 @@ function autoCorrelate(buf, sampleRate){
 
 let smoothMidi = [];
 function pitchLoop(){
-  if(!state.analyser) return;
+  if(!state.analyser){
+    if(state.micEnabled) requestAnimationFrame(pitchLoop);
+    return;
+  }
   const buf = new Float32Array(state.analyser.fftSize);
   state.analyser.getFloatTimeDomainData(buf);
   const f = autoCorrelate(buf, state.audioCtx.sampleRate);
@@ -158,6 +204,8 @@ function pitchLoop(){
     const cents = (sm-nearest)*100;
     state.liveMidi=nearest; state.liveCents=cents; state.liveHz=f;
     dailyLiveSample(nearest,cents);
+    captureHum(nearest,cents);
+    handleRangeMatch(nearest,cents);
     $('#liveNote').textContent = midiToName(nearest);
     $('#liveFreq').textContent = `${f.toFixed(1)} Hz`;
     $('#needle').style.left = `${Math.max(0,Math.min(100,50+cents/2))}%`;
@@ -183,17 +231,17 @@ async function ensureAudio(){
   return state.audioCtx;
 }
 
-async function playTone(midi,duration=.75,delay=0){
+async function playToneRaw(midi,duration=.75,delay=0){
   const ctx=await ensureAudio();
   const t=ctx.currentTime+delay;
   const master=ctx.createGain();
   const compressor=ctx.createDynamicsCompressor();
-  compressor.threshold.value=-12;
+  compressor.threshold.value=-16;
   compressor.knee.value=8;
   compressor.ratio.value=4;
   compressor.attack.value=.003;
   compressor.release.value=.18;
-  master.gain.value=0.72*(state.masterVolume||1);
+  master.gain.value=0.95*(state.masterVolume||1);
   master.connect(compressor).connect(ctx.destination);
 
   // Fundamental plus soft harmonics sounds much louder on a phone speaker
@@ -216,9 +264,24 @@ async function playTone(midi,duration=.75,delay=0){
   });
 }
 
-async function playPattern(midis,beat=.5){
+async function playTone(midi,duration=.75,delay=0,restoreMic=true){
+  const hadMic=state.micEnabled || !!state.stream;
+  if(hadMic) await stopMicForPlayback();
   await ensureAudio();
-  midis.forEach((m,i)=>playTone(m,beat*.82,i*beat));
+  await playToneRaw(midi,duration,delay);
+  const total=Math.max(0,(delay+duration)*1000);
+  if(hadMic && restoreMic){
+    setTimeout(()=>resumeMicAfterPlayback(180),total+60);
+  }
+}
+
+async function playPattern(midis,beat=.5){
+  const hadMic=state.micEnabled || !!state.stream;
+  if(hadMic) await stopMicForPlayback();
+  await ensureAudio();
+  midis.forEach((m,i)=>playToneRaw(m,beat*.82,i*beat));
+  const total=(midis.length*beat)*1000;
+  if(hadMic) setTimeout(()=>resumeMicAfterPlayback(180),total+60);
 }
 
 $('#appVolume').addEventListener('input',e=>{
@@ -252,180 +315,307 @@ function scoreTarget(note,cents){
 }
 
 
-$('#startLow').onclick=()=>startRange('low');
-$('#startHigh').onclick=()=>startRange('high');
-$('#replayRangeNote').onclick=()=>replayRangeTarget();
-$('#rangeCantMatch').onclick=()=>finishCurrentRangeSide();
 
-async function startRange(which){
-  if(!state.micEnabled) await enableMic();
+// ---------------- Guided Voice Check ----------------
+const voiceTest = {
+  active:false,
+  stage:'idle',
+  step:0,
+  target:null,
+  low:null,
+  high:null,
+  startingMidi:60,
+  holdFrames:0,
+  promptText:'',
+  spokenOnce:false,
+  retries:0,
+  speaking:false
+};
+
+function setAudioSession(type){
+  try{
+    if(navigator.audioSession && 'type' in navigator.audioSession){
+      navigator.audioSession.type=type;
+    }
+  }catch(e){}
+}
+
+function chooseCoachVoice(){
+  const voices=speechSynthesis.getVoices?.()||[];
+  return voices.find(v=>/Samantha|Karen|Moira|Tessa|Serena|Female|English/i.test(v.name))
+      || voices.find(v=>/^en/i.test(v.lang))
+      || voices[0]
+      || null;
+}
+
+async function coachSpeak(text, next=null){
+  voiceTest.promptText=text;
+  voiceTest.speaking=true;
+  $('#voiceOrb').className='voice-orb speaking';
+  $('#voiceListeningText').textContent='Coach speaking';
+  await stopMicForPlayback();
+  setAudioSession('playback');
+
+  return new Promise(resolve=>{
+    try{ speechSynthesis.cancel(); }catch(e){}
+    const u=new SpeechSynthesisUtterance(text);
+    const voice=chooseCoachVoice();
+    if(voice) u.voice=voice;
+    u.rate=.94;
+    u.pitch=1.02;
+    u.volume=1;
+    const done=async()=>{
+      voiceTest.speaking=false;
+      $('#voiceOrb').className='voice-orb';
+      $('#voiceListeningText').textContent='Get ready…';
+      if(next) await next();
+      resolve();
+    };
+    u.onend=done;
+    u.onerror=done;
+    speechSynthesis.speak(u);
+  });
+}
+
+async function coachPlayNote(midi, instructionAfter='Your turn.'){
+  await stopMicForPlayback();
+  setAudioSession('playback');
+  $('#voiceOrb').className='voice-orb speaking';
+  $('#voiceListeningText').textContent='Listen';
   await ensureAudio();
+  await playToneRaw(midi,.95);
+  await new Promise(r=>setTimeout(r,180));
+  setAudioSession('play-and-record');
+  await resumeMicAfterPlayback(320);
+  voiceTest.holdFrames=0;
+  voiceTest.retries=0;
+  $('#voiceOrb').className='voice-orb listening';
+  $('#voiceListeningText').textContent='Listening to you';
+  $('#voiceCoachMessage').textContent=instructionAfter;
+}
 
-  state.testingRange=which;
-  state.rangeObserved=[];
-  state.rangeHoldFrames=0;
-  state.rangeLastMatched=null;
+function voiceProgress(percent){
+  $('#voiceTestProgressBar').style.width=`${percent}%`;
+}
+function voiceStage(label,big,msg){
+  $('#voiceStageLabel').textContent=label;
+  $('#voicePromptBig').textContent=big;
+  $('#voiceCoachMessage').textContent=msg||'';
+}
+function resetVoiceMeter(){
+  $('#rangeTargetDisplay').textContent='—';
+  $('#rangeDetectedDisplay').textContent='—';
+  $('#rangeMatchDisplay').textContent='—';
+  $('#voiceMeterDot').style.left='50%';
+}
+async function beginVoiceCheck(){
+  voiceTest.active=true;
+  voiceTest.stage='intro';
+  voiceTest.low=null; voiceTest.high=null; voiceTest.target=null;
+  voiceTest.holdFrames=0; voiceTest.retries=0;
+  $('#voiceResultCard').classList.add('hidden');
+  resetVoiceMeter();
+  voiceProgress(5);
+  voiceStage('STEP 1 OF 4','Meet your voice','');
+  await coachSpeak(
+    "Hi! I’m going to get to know your voice. Keep everything easy. This is not a test of how high or low you can force your voice. We only want notes that feel comfortable.",
+    async()=>{
+      voiceStage('STEP 1 OF 4','Say a simple hello','Speak naturally for a moment.');
+      $('#voiceOrb').className='voice-orb listening';
+      $('#voiceListeningText').textContent='Listening to your speaking voice';
+      setAudioSession('play-and-record');
+      await enableMic(true);
+      setTimeout(()=>startHumIntro(),2600);
+    }
+  );
+}
 
-  // Start around an easy central note. If a saved range exists, use its centre.
-  const savedLow = state.progress.rangeLow, savedHigh = state.progress.rangeHigh;
-  let startMidi = (savedLow!=null && savedHigh!=null)
-    ? Math.round((savedLow+savedHigh)/2)
-    : 60; // C4 is a neutral default starting point.
+async function startHumIntro(){
+  if(!voiceTest.active) return;
+  voiceProgress(18);
+  voiceTest.stage='hum';
+  voiceStage('STEP 2 OF 4','Give me an easy hum','');
+  await coachSpeak(
+    "Great. Now hum one comfortable note. Just an easy mmm, right in the middle of your voice. Hold it for about two seconds.",
+    async()=>{
+      voiceTest.target=null;
+      voiceTest.holdFrames=0;
+      $('#voiceOrb').className='voice-orb listening';
+      $('#voiceListeningText').textContent='Hum now';
+      setAudioSession('play-and-record');
+      await enableMic(true);
+    }
+  );
+}
 
-  // Keep the opening target within a broadly singable test area.
-  startMidi = Math.max(48, Math.min(67, startMidi));
-  state.rangeStartMidi=startMidi;
-  state.rangeTarget=startMidi;
-  state.rangeListenAfter=Date.now()+1200;
-  $('#rangeTargetDisplay').textContent=midiToName(state.rangeTarget);
+let humSamples=[];
+function captureHum(note,cents){
+  if(!voiceTest.active || voiceTest.stage!=='hum' || voiceTest.speaking) return;
+  humSamples.push(note+cents/100);
+  if(humSamples.length>35) humSamples.shift();
+  $('#rangeDetectedDisplay').textContent=midiToName(note);
+  if(humSamples.length>=18){
+    const sorted=[...humSamples].sort((a,b)=>a-b);
+    voiceTest.startingMidi=Math.round(sorted[Math.floor(sorted.length/2)]);
+    humSamples=[];
+    startLowGuided();
+  }
+}
+
+async function startLowGuided(){
+  voiceTest.stage='low';
+  voiceTest.target=voiceTest.startingMidi;
+  voiceTest.low=null;
+  voiceTest.holdFrames=0;
+  voiceProgress(30);
+  voiceStage('STEP 3 OF 4','Let’s find your low notes','');
+  await coachSpeak(
+    "Nice. Now we’ll move downward one note at a time. I’ll play a note, then you copy it. Stop when the next note no longer feels comfortable.",
+    async()=>presentRangeTarget('low')
+  );
+}
+
+async function startHighGuided(){
+  voiceTest.stage='high';
+  voiceTest.target=voiceTest.startingMidi;
+  voiceTest.high=null;
+  voiceTest.holdFrames=0;
+  voiceProgress(65);
+  voiceStage('STEP 4 OF 4','Now your high notes','');
+  await coachSpeak(
+    "Good. Now we’ll go upward. Keep the sound light. Do not get louder to reach the note. If it feels tight, that is where we stop.",
+    async()=>presentRangeTarget('high')
+  );
+}
+
+async function presentRangeTarget(side){
+  if(!voiceTest.active) return;
+  $('#rangeTargetDisplay').textContent=midiToName(voiceTest.target);
   $('#rangeDetectedDisplay').textContent='—';
   $('#rangeMatchDisplay').textContent='Listen';
-
-  if(which==='low'){
-    state.rangeLow=null;
-    $('#lowRange').textContent='—';
-    $('#rangeFeedback').textContent=`LOW test: listen to ${midiToName(state.rangeTarget)}, then copy it. Hold it steadily for about 1 second.`;
-  }else{
-    state.rangeHigh=null;
-    $('#highRange').textContent='—';
-    $('#rangeFeedback').textContent=`HIGH test: listen to ${midiToName(state.rangeTarget)}, then copy it gently. Hold it steadily for about 1 second.`;
-  }
-
-  playTone(state.rangeTarget,.8);
-  state.rangeListenAfter=Date.now()+1150;
+  voiceStage(side==='low'?'STEP 3 OF 4':'STEP 4 OF 4',
+             side==='low'?'Copy this lower note':'Copy this higher note',
+             `Listen to ${midiToName(voiceTest.target)}. I’ll tell you when it’s your turn.`);
+  await coachPlayNote(
+    voiceTest.target,
+    `Your turn — sing ${midiToName(voiceTest.target)} and hold it comfortably.`
+  );
 }
 
-function replayRangeTarget(){
-  if(state.testingRange && state.rangeTarget!=null){
-    state.rangeHoldFrames=0;
-    $('#rangeTargetDisplay').textContent=midiToName(state.rangeTarget);
-    $('#rangeDetectedDisplay').textContent='—';
-    $('#rangeMatchDisplay').textContent='Listen';
-    playTone(state.rangeTarget,.8);
-    state.rangeListenAfter=Date.now()+1150;
-    $('#rangeFeedback').textContent=`Listen to ${midiToName(state.rangeTarget)} first. When the sound stops, sing the same note and hold it.`;
-  }else{
-    $('#rangeFeedback').textContent='Start the LOW or HIGH guided test first.';
-  }
-}
-
-function observeRange(note,cents){
-  if(!state.testingRange || state.rangeTarget==null) return;
-  if(Date.now() < (state.rangeListenAfter||0)) return;
-
+async function handleRangeMatch(note,cents){
+  if(!voiceTest.active || !['low','high'].includes(voiceTest.stage) || voiceTest.speaking) return;
+  const signed=(note-voiceTest.target)*100+cents;
+  const dist=Math.abs(signed);
   $('#rangeDetectedDisplay').textContent=midiToName(note);
+  $('#voiceMeterDot').style.left=`${Math.max(4,Math.min(96,50+signed/4))}%`;
 
-  // Score distance from the exact target, not merely the nearest detected note.
-  const signedDistance=(note-state.rangeTarget)*100+cents;
-  const distance=Math.abs(signedDistance);
-
-  if(distance <= 45){
-    state.rangeHoldFrames++;
-    const pct=Math.max(0,Math.round(100-distance));
+  if(dist<=42){
+    voiceTest.holdFrames++;
+    const pct=Math.max(0,Math.round(100-dist));
     $('#rangeMatchDisplay').textContent=`${pct}%`;
-    $('#rangeFeedback').textContent=`Yes — that is ${midiToName(state.rangeTarget)}. Keep holding it steadily…`;
+    if(voiceTest.holdFrames>=10){
+      const matched=voiceTest.target;
+      $('#voiceOrb').className='voice-orb success';
+      $('#voiceListeningText').textContent='Got it!';
+      await stopMicForPlayback();
 
-    // Roughly ~0.7–1 sec depending on device callback rate.
-    if(state.rangeHoldFrames >= 12){
-      const matched = state.rangeTarget;
-      state.rangeLastMatched = matched;
-
-      if(state.testingRange==='low'){
-        state.rangeLow = matched;
-        $('#lowRange').textContent = midiToName(matched);
-        state.rangeTarget = matched - 1;
+      if(voiceTest.stage==='low'){
+        voiceTest.low=matched;
+        voiceTest.target=matched-1;
+        voiceProgress(Math.min(58,30+(voiceTest.startingMidi-voiceTest.target)*4));
+        await coachSpeak(
+          Math.random()>.5 ? "Good. Let’s try one step lower." : "Nice. One more step down.",
+          async()=>presentRangeTarget('low')
+        );
       }else{
-        state.rangeHigh = matched;
-        $('#highRange').textContent = midiToName(matched);
-        state.rangeTarget = matched + 1;
+        voiceTest.high=matched;
+        voiceTest.target=matched+1;
+        voiceProgress(Math.min(94,65+(voiceTest.target-voiceTest.startingMidi)*4));
+        await coachSpeak(
+          Math.random()>.5 ? "Good. Let’s try one step higher." : "Nice. One more step up.",
+          async()=>presentRangeTarget('high')
+        );
       }
-
-      state.rangeHoldFrames=0;
-
-      if(state.rangeLow!=null && state.rangeHigh!=null){
-        $('#rangeSpan').textContent=`${state.rangeHigh-state.rangeLow} semitones`;
-      }
-
-      // Hard safety boundaries to prevent a runaway test.
-      if(state.rangeTarget < 36 || state.rangeTarget > 84){
-        finishCurrentRangeSide();
-        return;
-      }
-
-      setTimeout(()=>{
-        if(state.testingRange){
-          $('#rangeTargetDisplay').textContent=midiToName(state.rangeTarget);
-          $('#rangeDetectedDisplay').textContent='—';
-          $('#rangeMatchDisplay').textContent='Listen';
-          $('#rangeFeedback').textContent=`Good. Now listen to ${midiToName(state.rangeTarget)}. Sing only after the reference sound stops.`;
-          playTone(state.rangeTarget,.8);
-          state.rangeListenAfter=Date.now()+1150;
-        }
-      },350);
     }
   }else{
-    state.rangeHoldFrames=Math.max(0,state.rangeHoldFrames-1);
-    const direction=signedDistance<0?'below':'above';
-    $('#rangeMatchDisplay').textContent=distance<100?'Close':'Try again';
-    $('#rangeFeedback').textContent=`Target ${midiToName(state.rangeTarget)}. You are singing ${midiToName(note)} (${Math.round(distance)} cents ${direction}). Adjust gently or replay the target.`;
+    voiceTest.holdFrames=Math.max(0,voiceTest.holdFrames-1);
+    voiceTest.retries++;
+    $('#rangeMatchDisplay').textContent=dist<100?'Almost':'Try again';
+    if(voiceTest.retries===30){
+      $('#voiceCoachMessage').textContent=
+        signed<0 ? 'You’re below the target. Let the pitch rise gently.' : 'You’re above the target. Let the pitch settle slightly.';
+    }
   }
 }
 
-function finishCurrentRangeSide(){
-  if(!state.testingRange){
-    $('#rangeFeedback').textContent='Start a guided range test first.';
-    return;
-  }
-
-  const side=state.testingRange;
-  state.testingRange=null;
-  state.rangeTarget=null;
-  state.rangeHoldFrames=0;
-  $('#rangeTargetDisplay').textContent='—';
-  $('#rangeMatchDisplay').textContent='Finished';
-
-  if(side==='low'){
-    if(state.rangeLow==null){
-      $('#rangeFeedback').textContent='No low note was confirmed yet. Try the LOW test again and match the first target before stopping.';
+async function voiceCantMatch(){
+  if(!voiceTest.active) return;
+  await stopMicForPlayback();
+  if(voiceTest.stage==='low'){
+    if(voiceTest.low==null){
+      await coachSpeak("No problem. Let’s restart the low section from your comfortable middle note.", async()=>{
+        voiceTest.target=voiceTest.startingMidi;
+        presentRangeTarget('low');
+      });
     }else{
-      $('#rangeFeedback').textContent=`Low side finished at ${midiToName(state.rangeLow)}. Now start the HIGH test.`;
+      await coachSpeak("Perfect. That means we found the comfortable bottom of your voice. Now let’s check the top.", startHighGuided);
     }
-  }else{
-    if(state.rangeHigh==null){
-      $('#rangeFeedback').textContent='No high note was confirmed yet. Try the HIGH test again and match the first target before stopping.';
+  }else if(voiceTest.stage==='high'){
+    if(voiceTest.high==null){
+      await coachSpeak("No problem. Let’s restart the high section from your comfortable middle note.", async()=>{
+        voiceTest.target=voiceTest.startingMidi;
+        presentRangeTarget('high');
+      });
     }else{
-      $('#rangeFeedback').textContent=`High side finished at ${midiToName(state.rangeHigh)}. If both sides look right, tap Save range.`;
+      await coachSpeak("Great. I’ve got what I need. Let me show you your comfortable range.", showVoiceResult);
     }
-  }
-
-  if(state.rangeLow!=null && state.rangeHigh!=null){
-    $('#rangeSpan').textContent=`${state.rangeHigh-state.rangeLow} semitones`;
   }
 }
 
-$('#saveRange').onclick=()=>{
-  if(state.rangeLow==null || state.rangeHigh==null){
-    $('#rangeFeedback').textContent='Complete both the LOW and HIGH guided tests first.';
-    return;
-  }
-  if(state.rangeHigh <= state.rangeLow){
-    $('#rangeFeedback').textContent='Those results do not look valid. Please repeat both tests.';
-    return;
-  }
-  const span=state.rangeHigh-state.rangeLow;
-  if(span<7){
-    $('#rangeFeedback').textContent='That range looks unusually narrow. Repeat the tests gently before saving.';
-    return;
-  }
+function showVoiceResult(){
+  voiceTest.stage='result';
+  voiceProgress(100);
+  stopMicForPlayback();
+  const low=voiceTest.low, high=voiceTest.high;
+  const span=(low!=null&&high!=null)?high-low:null;
+  $('#voiceStageLabel').textContent='COMPLETE';
+  $('#voicePromptBig').textContent='That’s your voice!';
+  $('#voiceOrb').className='voice-orb success';
+  $('#voiceOrbIcon').textContent='✓';
+  $('#voiceListeningText').textContent='Voice check complete';
+  $('#voiceResultLow').textContent=low!=null?midiToName(low):'—';
+  $('#voiceResultHigh').textContent=high!=null?midiToName(high):'—';
+  $('#voiceResultSpan').textContent=span!=null?`${span} semitones`:'—';
+  $('#voiceResultRange').textContent=(low!=null&&high!=null)?`${midiToName(low)} – ${midiToName(high)}`:'Try again';
+  $('#voiceResultText').textContent=(low!=null&&high!=null)
+    ? 'This is your comfortable tested range today. SingNikiSing will use it to choose exercise starting notes and better song keys.'
+    : 'I could not confirm both ends of the range. Try the voice check again.';
+  $('#voiceResultCard').classList.remove('hidden');
+}
 
-  state.progress.rangeLow=state.rangeLow;
-  state.progress.rangeHigh=state.rangeHigh;
-  state.testingRange=null;
-  state.rangeTarget=null;
+function saveVoiceResult(){
+  if(voiceTest.low==null||voiceTest.high==null) return;
+  state.progress.rangeLow=voiceTest.low;
+  state.progress.rangeHigh=voiceTest.high;
+  markSession('Guided voice check',`${midiToName(voiceTest.low)}–${midiToName(voiceTest.high)}`);
+  refreshProgress();
+  $('#voiceCoachMessage').textContent='Saved. Your exercises and song-key suggestions now use this range.';
+}
 
-  markSession('Vocal range test',`${midiToName(state.rangeLow)}–${midiToName(state.rangeHigh)} · ${span} semitones`);
-  $('#rangeFeedback').textContent=`Saved: ${midiToName(state.rangeLow)}–${midiToName(state.rangeHigh)}. Song-key suggestions and exercises will now adapt to this range.`;
-};
+async function replayCoach(){
+  if(voiceTest.promptText) await coachSpeak(voiceTest.promptText);
+}
+async function replayVoiceNote(){
+  if(voiceTest.target!=null) await presentRangeTarget(voiceTest.stage);
+}
+
+$('#voiceTestStart').onclick=beginVoiceCheck;
+$('#voiceReplayCoach').onclick=replayCoach;
+$('#voiceReplayNote').onclick=replayVoiceNote;
+$('#voiceCantMatch').onclick=voiceCantMatch;
+$('#voiceSaveResult').onclick=saveVoiceResult;
+$('#voiceRetest').onclick=beginVoiceCheck;
+
 
 const exercises = [
  {id:'release',cat:'release',title:'Jaw + tongue release',mins:2,level:'All levels',why:'Reduces unnecessary tension around the jaw, tongue and laryngeal area before phonation.',instruction:'Drop the jaw loosely. Massage the masseter muscles. Let the tongue rest wide behind the lower teeth. Breathe silently through the mouth and nose. Add gentle sighs only if the throat feels easy.',pattern:null},
@@ -786,4 +976,16 @@ document.addEventListener('touchend', unlockAudioOnce, {passive:true});
 
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+
+
+const spk=$('#speakerTest');
+if(spk){
+  spk.onclick=async()=>{
+    await stopMicForPlayback();
+    setAudioSession('playback');
+    await coachSpeak("This is the Sing Niki Sing speaker test.");
+    await ensureAudio();
+    await playToneRaw(69,1.0);
+  };
 }

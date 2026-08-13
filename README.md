@@ -57,3 +57,21 @@ This is a practice tool, not a medical or clinical voice assessment. Vocal exerc
 - Real-time pitch note lane
 - More prominent personalised voice profile
 - Keeps the v4 audio and guided range-test fixes
+
+
+## v6 iPhone audio architecture
+- Works around iOS Safari microphone/playback routing behaviour by releasing microphone capture during reference-tone playback
+- Re-enables microphone capture after the reference is finished
+- Range test uses explicit listen → sing handoff
+- Added Test Speaker button
+- This addresses a known WebKit/iOS class of issues where getUserMedia can reduce or alter playback volume/routing
+
+
+## v7 Guided Coach
+- Spoken voice prompts using the browser's system speech voice
+- Fully sequenced voice check: natural speech → comfortable hum → guided low notes → guided high notes → result
+- Automatic progression after confirmed note matches
+- Spoken feedback between steps
+- Visible target / detected note / live pitch meter
+- Explicit iOS playback vs play-and-record audio-session switching where supported
+- Microphone released during coach speech and reference tones to improve iPhone playback volume and prevent self-detection

@@ -19,7 +19,11 @@
         <label class="volume-control">App volume
           <input id="appVolume" type="range" min="20" max="100" value="100" />
         </label>
-        <button id="micBtn" class="primary">Enable microphone</button>
+        <button id="speakerTest" class="secondary">Test speaker</button>
+        <button id="micBtn" class="primary">Turn listening on</button>
+      </div>
+    <div id="audioModeNotice" class="audio-mode-notice">
+        iPhone mode: coach voice and reference notes play with listening paused, then the microphone turns back on for your turn.
       </div>
     </header>
 
@@ -179,38 +183,77 @@
         </div>
       </section>
 
+
       <section class="screen" id="range">
-        <div class="card">
-          <div class="eyebrow">VOCAL RANGE TEST</div>
-          <h2>Find your comfortable singing range</h2>
-          <p>This test is intentionally conservative. Sing gently. Do not force the very bottom or top of your voice.</p>
-          <div class="range-readout">
-            <div><small>Lowest comfortable</small><strong id="lowRange">—</strong></div>
-            <div><small>Highest comfortable</small><strong id="highRange">—</strong></div>
-            <div><small>Span</small><strong id="rangeSpan">—</strong></div>
+        <div class="voice-test-shell">
+          <div class="coach-card">
+            <div class="coach-avatar">♪</div>
+            <div class="coach-copy">
+              <div class="eyebrow">VOICE CHECK</div>
+              <h2 id="coachTitle">Let’s get to know your voice</h2>
+              <p id="coachText">I’ll guide you through this. You won’t need to figure out what to press next.</p>
+            </div>
           </div>
-          <div class="range-buttons">
-            <button class="secondary" id="startLow">Start guided LOW test</button>
-            <button class="secondary" id="startHigh">Start guided HIGH test</button>
-            <button class="secondary" id="replayRangeNote">Replay current note</button>
-            <button class="secondary" id="rangeCantMatch">I can’t comfortably match this note</button>
-            <button class="primary" id="saveRange">Save range</button>
+
+          <div class="voice-test-card">
+            <div class="voice-test-progress">
+              <div id="voiceTestProgressBar"></div>
+            </div>
+
+            <div id="voiceStageLabel" class="voice-stage-label">READY</div>
+            <div id="voicePromptBig" class="voice-prompt-big">Tap Start</div>
+
+            <div class="voice-orb-wrap">
+              <div id="voiceOrb" class="voice-orb">
+                <span id="voiceOrbIcon">🎤</span>
+              </div>
+              <div id="voiceListeningText" class="voice-listening-text">Coach is ready</div>
+            </div>
+
+            <div class="voice-meter-wrap">
+              <div class="voice-meter-labels"><span>lower</span><span>target</span><span>higher</span></div>
+              <div class="voice-meter">
+                <div class="voice-meter-target"></div>
+                <div id="voiceMeterDot" class="voice-meter-dot"></div>
+              </div>
+            </div>
+
+            <div class="voice-test-readout">
+              <div><small>Target</small><strong id="rangeTargetDisplay">—</strong></div>
+              <div><small>You</small><strong id="rangeDetectedDisplay">—</strong></div>
+              <div><small>Match</small><strong id="rangeMatchDisplay">—</strong></div>
+            </div>
+
+            <div id="voiceCoachMessage" class="voice-coach-message">
+              This check should feel comfortable. Never push for a note.
+            </div>
+
+            <div class="voice-test-actions">
+              <button class="primary voice-big-btn" id="voiceTestStart">Start voice check</button>
+              <button class="secondary" id="voiceReplayCoach">Repeat instruction</button>
+              <button class="secondary" id="voiceReplayNote">Replay note</button>
+              <button class="secondary" id="voiceCantMatch">That note is uncomfortable</button>
+            </div>
           </div>
-          <div class="range-status-grid">
-            <div><small>Target</small><strong id="rangeTargetDisplay">—</strong></div>
-            <div><small>You are singing</small><strong id="rangeDetectedDisplay">—</strong></div>
-            <div><small>Match</small><strong id="rangeMatchDisplay">—</strong></div>
+
+          <div id="voiceResultCard" class="card voice-result-card hidden">
+            <div class="eyebrow">YOUR VOICE</div>
+            <h2 id="voiceResultRange">—</h2>
+            <p id="voiceResultText"></p>
+            <div class="grid three">
+              <div class="stat"><span>Low note</span><strong id="voiceResultLow">—</strong></div>
+              <div class="stat"><span>High note</span><strong id="voiceResultHigh">—</strong></div>
+              <div class="stat"><span>Span</span><strong id="voiceResultSpan">—</strong></div>
+            </div>
+            <button class="primary" id="voiceSaveResult">Use this voice profile</button>
+            <button class="secondary" id="voiceRetest">Test again</button>
           </div>
-          <div class="feedback" id="rangeFeedback">Do the LOW test first, then the HIGH test. Sing only comfortably — never force a note.</div>
-        </div>
-        <div class="card voice-profile-card">
-          <div class="eyebrow">YOUR VOICE PROFILE</div>
-          <h3 id="voiceProfileTitle">Complete the range check</h3>
-          <p id="voiceProfileText">Once both ends are confirmed, SingNikiSing will shift exercises and songs into a more comfortable area for you.</p>
-        </div>
-        <div class="card">
-          <h3>What the app does with your range</h3>
-          <p>Exercises are shifted into your comfortable zone. Songs receive a suggested key so their melody fits you better. Your range is not used to permanently label your “voice type” because timbre, tessitura and training matter too.</p>
+
+          <div class="card voice-profile-card">
+            <div class="eyebrow">CURRENT PROFILE</div>
+            <h3 id="voiceProfileTitle">No voice check saved yet</h3>
+            <p id="voiceProfileText">Once your comfortable range is saved, exercises and song keys will adapt to it.</p>
+          </div>
         </div>
       </section>
 
@@ -250,7 +293,7 @@
             <p>The app plays a short two-note interval. Sing the second note after hearing both.</p>
             <button class="secondary" id="intervalPlay">Play interval</button>
             <button class="primary" id="intervalNew">New interval</button>
-            <div class="feedback" id="intervalFeedback">Enable microphone for live scoring.</div>
+            <div class="feedback" id="intervalFeedback">Turn listening on for live scoring.</div>
           </div>
         </div>
       </section>
