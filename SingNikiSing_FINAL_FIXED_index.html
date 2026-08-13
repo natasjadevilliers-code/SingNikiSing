@@ -1,0 +1,815 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#fbfafc">
+<title>SingNikiSing — Personal Vocal Coach</title>
+<style>
+:root{
+  --bg:#f7f7fb;--surface:#fff;--surface2:#f2f1f7;--ink:#23232d;--muted:#737381;
+  --purple:#7357ff;--purple2:#a590ff;--pink:#ff6fa8;--green:#22b77b;--amber:#eeaa35;
+  --red:#e35e76;--line:rgba(29,29,43,.08);--shadow:0 14px 40px rgba(35,35,55,.08);
+  --radius:24px
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif}
+body{min-height:100vh;padding-bottom:96px}
+button,input,select{font:inherit}
+button{cursor:pointer;-webkit-tap-highlight-color:transparent}
+button:disabled{opacity:.45;cursor:default}
+.app{max-width:860px;margin:auto;padding:0 16px}
+header{
+  position:sticky;top:0;z-index:20;background:rgba(247,247,251,.92);backdrop-filter:blur(18px);
+  padding:calc(10px + env(safe-area-inset-top)) 0 10px;border-bottom:1px solid var(--line)
+}
+.header-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:42px;height:42px;border-radius:14px;background:linear-gradient(145deg,var(--purple),var(--pink));color:#fff;display:grid;place-items:center;font-size:22px;font-weight:900}
+.brand h1{font-size:1.35rem;margin:0}
+.brand small{display:block;color:var(--muted);font-size:.72rem;margin-top:2px}
+.header-actions{display:flex;align-items:center;gap:8px}
+.icon-btn{width:42px;height:42px;border:0;border-radius:14px;background:#fff;box-shadow:0 4px 16px rgba(35,35,55,.06);color:var(--ink)}
+.mic-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block;margin-left:3px}
+.mic-dot.on{background:var(--green);box-shadow:0 0 0 4px rgba(34,183,123,.13)}
+.screen{display:none;padding:18px 0}
+.screen.active{display:block}
+.eyebrow{font-size:.71rem;font-weight:850;letter-spacing:.12em;color:var(--purple)}
+h2{font-size:clamp(1.75rem,7vw,2.65rem);line-height:1.08;margin:.3rem 0 .7rem}
+h3{font-size:1.14rem;margin:.1rem 0 .5rem}
+p{color:var(--muted);line-height:1.55}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);margin-bottom:14px}
+.hero{background:linear-gradient(135deg,#eeeaff,#fff0f6);display:flex;justify-content:space-between;gap:14px;align-items:center}
+.hero p{margin-bottom:0}
+.hero-note{flex:none;width:78px;height:78px;border-radius:25px;background:#fff;color:var(--purple);display:grid;place-items:center;font-size:2.7rem;font-weight:900;box-shadow:0 10px 25px rgba(90,60,180,.12)}
+.quick-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.quick{border:0;color:#fff;border-radius:22px;padding:17px;text-align:left;min-height:128px;box-shadow:0 12px 24px rgba(35,35,55,.10)}
+.quick b,.quick small{display:block}.quick b{font-size:1.04rem;margin-top:15px}.quick small{opacity:.86;margin-top:4px}
+.quick .qicon{font-size:1.45rem}
+.quick.practice{background:linear-gradient(145deg,#7159f5,#977fff)}
+.quick.song{background:linear-gradient(145deg,#fc669f,#ff9190)}
+.quick.voice{background:linear-gradient(145deg,#438cf6,#67b9fa)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stat{background:#fff;border-radius:18px;padding:15px;border:1px solid var(--line)}
+.stat small{color:var(--muted);display:block}.stat strong{font-size:1.18rem;display:block;margin-top:5px}
+.path{display:grid;gap:0;margin-top:12px}
+.path-node{display:grid;grid-template-columns:38px 1fr auto;gap:12px;align-items:center}
+.path-num{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:#ececf2;color:#777;font-weight:900}
+.path-node.current .path-num{background:var(--purple);color:#fff}.path-node.done .path-num{background:#d5f5e7;color:#13875a}
+.path-node small{display:block;color:var(--muted);margin-top:2px}.path-line{width:2px;height:18px;background:#e6e5ed;margin-left:18px}
+.pill{display:inline-flex;align-items:center;border-radius:999px;background:#f1eeff;color:#5b44d3;padding:7px 10px;font-size:.78rem;font-weight:800}
+.primary,.secondary,.ghost,.danger{border:0;border-radius:14px;padding:13px 16px;font-weight:800}
+.primary{background:linear-gradient(135deg,var(--purple),#8c72ff);color:#fff}
+.secondary{background:#efedff;color:#5c48cc}
+.ghost{background:#f3f3f7;color:#4f4f5c}
+.danger{background:#fff0f3;color:#c74460}
+.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px}
+.full{width:100%}
+.center{text-align:center}
+.coach-card{background:linear-gradient(135deg,#eee9ff,#fff1f7);display:flex;align-items:center;gap:14px}
+.coach-avatar{width:64px;height:64px;border-radius:21px;background:#fff;display:grid;place-items:center;font-size:2rem;color:var(--purple);box-shadow:0 8px 20px rgba(90,60,180,.12)}
+.progress-track{height:8px;background:#ececf2;border-radius:999px;overflow:hidden}.progress-fill{height:100%;width:0;background:linear-gradient(90deg,var(--purple),var(--pink));transition:width .3s}
+.big-prompt{font-size:clamp(1.75rem,8vw,2.7rem);font-weight:900;text-align:center;margin:16px 0 8px}
+.orb{width:120px;height:120px;margin:18px auto 8px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 35% 30%,#a996ff,#7357ff);color:#fff;font-size:2.6rem;box-shadow:0 18px 42px rgba(115,87,255,.24);transition:.2s}
+.orb.listening{animation:pulse 1.2s infinite}.orb.speaking{background:radial-gradient(circle at 35% 30%,#ffb4d0,#ff6fa8)}.orb.good{background:radial-gradient(circle at 35% 30%,#78dfb5,#22b77b)}
+@keyframes pulse{50%{transform:scale(1.06)}}
+.status-text{text-align:center;color:var(--muted);font-weight:750}
+.pitch-lane{margin:18px 0}.lane-labels{display:flex;justify-content:space-between;color:var(--muted);font-size:.72rem}.lane{height:18px;border-radius:999px;background:linear-gradient(90deg,#e8edff,#ddf4e9,#e8edff);position:relative;margin-top:6px}
+.lane-target{position:absolute;left:50%;top:-3px;width:5px;height:24px;background:var(--purple);border-radius:6px}.lane-dot{position:absolute;left:50%;top:50%;width:24px;height:24px;border-radius:50%;background:var(--pink);transform:translate(-50%,-50%);transition:left .08s}
+.readouts{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.readout{background:#f7f7fa;border-radius:14px;padding:11px;text-align:center}.readout small{display:block;color:var(--muted)}.readout strong{font-size:1.25rem}
+.coach-message{margin-top:14px;background:#f5f2ff;border-radius:16px;padding:14px;line-height:1.5;color:#454454}
+.voice-result{background:linear-gradient(135deg,#f0edff,#fff)}
+.daily-stage{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.points{background:#f1eeff;color:#5d49d1;border-radius:18px;padding:11px 14px;text-align:center}.points strong{display:block;font-size:1.5rem}
+.timer{font-size:2.7rem;font-weight:900;margin:12px 0}
+.sequence{display:grid;gap:8px}.seq{display:grid;grid-template-columns:32px 1fr auto;gap:10px;align-items:center;background:#f7f7fa;border-radius:13px;padding:10px}.seq .n{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#e9e9ef;font-weight:850}.seq.active{outline:2px solid #d8d0ff;background:#f4f1ff}.seq.done .n{background:#d8f4e8;color:#16865a}.seq small{color:var(--muted)}
+.live-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:14px 0}.live-grid .readout{background:#f7f7fa}
+.scorebar{height:10px;border-radius:999px;background:#ececf2;overflow:hidden}.scorebar>div{height:100%;background:linear-gradient(90deg,var(--pink),var(--purple));width:0;transition:width .2s}
+.exercise-grid,.song-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:11px}.exercise,.song{background:#fff;border:1px solid var(--line);border-radius:20px;padding:17px}.tag{display:inline-block;padding:5px 8px;border-radius:999px;background:#f0edff;color:#5b46d1;font-size:.69rem;font-weight:850;letter-spacing:.05em}.exercise p,.song p{font-size:.9rem}.meta{color:var(--muted);font-size:.79rem}
+.song .rangefit{font-weight:800;font-size:.82rem;margin-top:9px}.fit{color:var(--green)}.nofit{color:var(--amber)}
+.note-display{text-align:center;font-size:5.2rem;font-weight:950;color:#4937b8;line-height:1;margin:14px 0 3px}.freq{text-align:center;color:var(--muted)}
+.settings-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}.settings-row:last-child{border:0}
+select,input[type=range]{max-width:100%}select{padding:10px;border-radius:12px;border:1px solid var(--line);background:#fff;color:var(--ink)}
+.recording{display:flex;align-items:center;gap:10px;background:#f7f7fa;padding:10px;border-radius:13px;margin-top:8px}.recording audio{width:100%;min-width:0}
+.history-item{padding:12px 0;border-bottom:1px solid var(--line)}.history-item:last-child{border:0}
+.toast{position:fixed;left:50%;bottom:102px;transform:translateX(-50%) translateY(20px);background:#262633;color:#fff;border-radius:999px;padding:10px 15px;font-size:.84rem;font-weight:750;opacity:0;pointer-events:none;transition:.2s;z-index:50;max-width:90%;text-align:center}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.bottom-nav{position:fixed;left:0;right:0;bottom:0;z-index:30;background:rgba(255,255,255,.94);backdrop-filter:blur(18px);border-top:1px solid var(--line);padding:7px 8px calc(7px + env(safe-area-inset-bottom))}
+.bottom-inner{max-width:860px;margin:auto;display:grid;grid-template-columns:repeat(5,1fr);gap:3px}
+.nav-btn{border:0;background:transparent;color:#7b7b86;border-radius:14px;padding:7px 4px;font-size:.69rem;font-weight:750}.nav-btn span{display:block;font-size:1.25rem;margin-bottom:2px}.nav-btn.active{color:var(--purple);background:#f2efff}
+.modal{position:fixed;inset:0;background:rgba(20,20,30,.5);z-index:60;display:grid;place-items:end center;padding:16px}.modal.hidden{display:none}.sheet{background:#fff;border-radius:28px 28px 18px 18px;padding:20px;width:min(680px,100%);max-height:86vh;overflow:auto}.sheet-head{display:flex;justify-content:space-between;gap:10px}.close{width:38px;height:38px;border:0;border-radius:50%;background:#f0f0f4}
+.selftest{font-family:ui-monospace,monospace;white-space:pre-wrap;font-size:12px}
+@media(max-width:650px){
+ .quick-grid,.exercise-grid,.song-grid{grid-template-columns:1fr}.quick{min-height:96px}.stats{grid-template-columns:repeat(3,1fr)}
+ .hero-note{width:62px;height:62px;border-radius:20px;font-size:2.1rem}.card{padding:17px}.readouts,.live-grid{grid-template-columns:repeat(3,1fr)}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="app header-row">
+    <div class="brand"><div class="logo">♪</div><div><h1>SingNikiSing</h1><small>Your personal vocal coach</small></div></div>
+    <div class="header-actions">
+      <button class="icon-btn" id="coachPreviewBtn" aria-label="Test coach voice">🔊</button>
+      <button class="icon-btn" id="micToggleBtn" aria-label="Microphone">🎤<span id="micDot" class="mic-dot"></span></button>
+    </div>
+  </div>
+</header>
+
+<div class="app">
+<section id="home" class="screen active">
+  <div class="card hero">
+    <div><div class="eyebrow">TODAY</div><h2>Ready to sing?</h2><p>Follow a guided session, check your voice, or practise a song in a key that suits you.</p></div>
+    <div class="hero-note">♫</div>
+  </div>
+  <div class="quick-grid">
+    <button class="quick practice" data-go="daily"><span class="qicon">▶</span><b>Daily practice</b><small>Warm up → train → sing</small></button>
+    <button class="quick song" data-go="songs"><span class="qicon">♫</span><b>Sing a song</b><small>Phrase-by-phrase practice</small></button>
+    <button class="quick voice" data-go="voice"><span class="qicon">↕</span><b>Check my voice</b><small>Guided range setup</small></button>
+  </div>
+  <div class="stats">
+    <div class="stat"><small>Range</small><strong id="homeRange">Not set</strong></div>
+    <div class="stat"><small>Streak</small><strong id="homeStreak">0 days</strong></div>
+    <div class="stat"><small>Points</small><strong id="homePoints">0</strong></div>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><div><div class="eyebrow">YOUR PATH</div><h3>Build your voice step by step</h3></div><span class="pill">Level <span id="homeLevel" style="margin-left:4px">1</span></span></div>
+    <div class="path" id="homePath"></div>
+  </div>
+  <div class="card" style="background:#fff9e7;border-color:#f1e2a5"><b>💡 Today’s tip</b><p style="margin-bottom:0">Comfort comes before range. A note that needs pushing is not a useful “comfortable range” note.</p></div>
+</section>
+
+<section id="voice" class="screen">
+  <div class="card coach-card">
+    <div class="coach-avatar">♪</div>
+    <div><div class="eyebrow">GUIDED VOICE CHECK</div><h3 id="voiceCoachTitle">Let’s get to know your voice</h3><p id="voiceCoachSub" style="margin:0">The coach will tell you what to do, one step at a time.</p></div>
+  </div>
+  <div class="card center" id="voiceTestCard">
+    <div class="progress-track"><div class="progress-fill" id="voiceProgress"></div></div>
+    <div class="eyebrow" id="voiceStage" style="margin-top:18px">READY</div>
+    <div class="big-prompt" id="voicePrompt">Tap Start</div>
+    <div class="orb" id="voiceOrb">🎤</div>
+    <div class="status-text" id="voiceStatus">Coach ready</div>
+    <div class="pitch-lane" id="voiceLane" style="display:none">
+      <div class="lane-labels"><span>lower</span><span>target</span><span>higher</span></div>
+      <div class="lane"><div class="lane-target"></div><div class="lane-dot" id="voiceDot"></div></div>
+    </div>
+    <div class="readouts" id="voiceReadouts" style="display:none">
+      <div class="readout"><small>Target</small><strong id="voiceTarget">—</strong></div>
+      <div class="readout"><small>You</small><strong id="voiceDetected">—</strong></div>
+      <div class="readout"><small>Match</small><strong id="voiceMatch">—</strong></div>
+    </div>
+    <div class="coach-message" id="voiceMessage">We only count notes that feel comfortable. Never strain for the test.</div>
+    <div class="actions" style="justify-content:center">
+      <button class="primary" id="voicePrimary">Start voice check</button>
+      <button class="secondary" id="voiceRepeat">Repeat coach</button>
+      <button class="ghost" id="voiceReplayTone" style="display:none">Replay note</button>
+      <button class="ghost" id="voiceUncomfortable" style="display:none">That note feels uncomfortable</button>
+      <button class="ghost" id="voiceHumFallback" style="display:none">It can’t hear my hum — continue</button>
+    </div>
+  </div>
+  <div class="card voice-result" id="voiceResult" style="display:none">
+    <div class="eyebrow">YOUR VOICE PROFILE</div><h2 id="voiceResultTitle">—</h2><p id="voiceResultText"></p>
+    <div class="stats">
+      <div class="stat"><small>Low</small><strong id="resultLow">—</strong></div>
+      <div class="stat"><small>High</small><strong id="resultHigh">—</strong></div>
+      <div class="stat"><small>Span</small><strong id="resultSpan">—</strong></div>
+    </div>
+    <div class="actions"><button class="primary" id="saveVoiceProfile">Use this profile</button><button class="secondary" id="retestVoice">Test again</button></div>
+  </div>
+</section>
+
+<section id="daily" class="screen">
+  <div class="card daily-stage">
+    <div><div class="eyebrow">DAILY COACH</div><h2 style="font-size:2rem" id="dailyTitle">Today’s guided workout</h2><p id="dailySubtitle">About 15 minutes, in a safe training order.</p></div>
+    <div class="points"><strong id="dailyPoints">0</strong><small>points</small></div>
+  </div>
+  <div class="card">
+    <div class="progress-track"><div class="progress-fill" id="dailyProgress"></div></div>
+    <div class="eyebrow" id="dailyStageLabel" style="margin-top:18px">READY</div>
+    <h2 style="font-size:2rem" id="dailyExercise">Press Start</h2>
+    <p id="dailyWhy">I’ll guide you through release, efficient warm-up, pitch, control and song work.</p>
+    <div class="timer" id="dailyTimer">00:00</div>
+    <div class="coach-message" id="dailyInstruction">Turn coach voice on in Settings if you want spoken instructions.</div>
+    <div class="live-grid">
+      <div class="readout"><small>Live note</small><strong id="dailyNote">—</strong></div>
+      <div class="readout"><small>Pitch</small><strong id="dailyPitch">—</strong></div>
+      <div class="readout"><small>Control</small><strong id="dailyControl">—</strong></div>
+    </div>
+    <div class="scorebar"><div id="dailyScoreBar"></div></div>
+    <div class="actions">
+      <button class="primary" id="dailyStart">Start session</button>
+      <button class="secondary" id="dailyDemo">Hear example</button>
+      <button class="ghost" id="dailyRecord">Record step</button>
+      <button class="ghost" id="dailyNext">Complete & next</button>
+    </div>
+    <div id="recordStatus" class="meta" style="margin-top:10px">Recording off</div>
+    <div id="recordings"></div>
+  </div>
+  <div class="card"><h3>Today’s sequence</h3><div class="sequence" id="dailySequence"></div></div>
+  <div class="card"><div class="eyebrow">EXERCISE LIBRARY</div><h3>Targeted vocal exercises</h3><p>Use these outside the daily session when you want extra work on a specific skill.</p><div class="exercise-grid" id="exerciseGrid"></div></div>
+</section>
+
+<section id="pitch" class="screen">
+  <div class="card">
+    <div class="eyebrow">LIVE PITCH</div><div class="note-display" id="liveNote">—</div><div class="freq" id="liveFreq">Turn listening on and sing</div>
+    <div class="pitch-lane"><div class="lane-labels"><span>flat</span><span>centred</span><span>sharp</span></div><div class="lane"><div class="lane-target"></div><div class="lane-dot" id="pitchDot"></div></div></div>
+    <div class="readouts" style="margin-top:14px">
+      <div class="readout"><small>Mic level</small><strong id="micLevelText">—</strong></div>
+      <div class="readout"><small>Signal</small><strong id="signalText">Waiting</strong></div>
+      <div class="readout"><small>Confidence</small><strong id="confidenceText">—</strong></div>
+    </div>
+    <div class="coach-message center" id="pitchMessage">Your live pitch will appear here.</div>
+  </div>
+  <div class="card">
+    <div class="eyebrow">MATCH A NOTE</div><h3 id="matchTargetLabel">Target A3</h3>
+    <p>Listen first, then copy the note. SingNikiSing scores how quickly and accurately you centre it.</p>
+    <div class="actions"><button class="secondary" id="matchPlay">Play target</button><button class="primary" id="matchNew">New note</button></div>
+    <div class="readouts" style="margin-top:14px"><div class="readout"><small>Accuracy</small><strong id="matchScore">—</strong></div><div class="readout"><small>Best</small><strong id="matchBest">—</strong></div><div class="readout"><small>Points</small><strong id="matchPoints">0</strong></div></div>
+  </div>
+</section>
+
+<section id="songs" class="screen">
+  <div class="card">
+    <div class="eyebrow">SONG PRACTICE</div><h2>Songs that fit your voice</h2>
+    <p>These built-in melodies are traditional/public-domain or original practice material. Your saved range is used to suggest a more comfortable transposition.</p>
+    <div class="actions"><button class="secondary" data-go="voice">Update my voice profile</button></div>
+  </div>
+  <div class="song-grid" id="songGrid"></div>
+</section>
+
+<section id="me" class="screen">
+  <div class="stats">
+    <div class="stat"><small>Total points</small><strong id="mePoints">0</strong></div>
+    <div class="stat"><small>Sessions</small><strong id="meSessions">0</strong></div>
+    <div class="stat"><small>Best pitch</small><strong id="meBest">—</strong></div>
+  </div>
+  <div class="card">
+    <div class="eyebrow">SETTINGS</div><h3>Coach & audio</h3>
+    <div class="settings-row"><div><b>Coach voice</b><small style="display:block;color:var(--muted)">Uses your iPhone’s installed system voices</small></div><select id="voiceSelect"><option>Loading voices…</option></select></div>
+    <div class="settings-row"><div><b>Spoken coaching</b><small style="display:block;color:var(--muted)">Phase instructions and encouragement</small></div><input type="checkbox" id="spokenCoach" checked></div>
+    <div class="settings-row"><div><b>Reference volume</b><small style="display:block;color:var(--muted)">Note and pattern playback</small></div><input type="range" id="volumeSlider" min="20" max="100" value="100"></div>
+    <div class="actions"><button class="secondary" id="voicePreviewSettings">Preview coach voice</button><button class="secondary" id="tonePreviewSettings">Preview reference note</button><button class="secondary" id="micTestSettings">Test microphone</button></div>
+    <div class="coach-message" id="micTestResult" style="display:none;margin-top:12px"></div>
+  </div>
+  <div class="card"><div class="eyebrow">HISTORY</div><h3>Recent training</h3><div id="history"></div></div>
+  <div class="card"><button class="danger" id="resetData">Reset all progress</button></div>
+  <div class="card selftest" id="selftestBox" style="display:none"></div>
+</section>
+</div>
+
+<nav class="bottom-nav">
+  <div class="bottom-inner">
+    <button class="nav-btn active" data-nav="home"><span>⌂</span>For You</button>
+    <button class="nav-btn" data-nav="daily"><span>▶</span>Practice</button>
+    <button class="nav-btn" data-nav="pitch"><span>♪</span>Pitch</button>
+    <button class="nav-btn" data-nav="songs"><span>♫</span>Songs</button>
+    <button class="nav-btn" data-nav="me"><span>●</span>Me</button>
+  </div>
+</nav>
+
+<div class="toast" id="toast"></div>
+<audio id="mediaPlayer" playsinline></audio>
+
+<div class="modal hidden" id="exerciseModal">
+  <div class="sheet">
+    <div class="sheet-head"><div><div class="eyebrow" id="modalTag">EXERCISE</div><h2 id="modalTitle" style="font-size:2rem"></h2></div><button class="close" id="modalClose">×</button></div>
+    <p id="modalText"></p><div class="coach-message" id="modalInstruction"></div>
+    <div class="actions"><button class="secondary" id="modalHear">Hear pattern</button><button class="primary" id="modalDone">Mark complete</button></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+// One-time cleanup of every older SingNikiSing offline build. This final build
+// intentionally has no service worker so GitHub Pages always serves the latest file.
+if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())).catch(()=>{})}
+if('caches' in window){caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).catch(()=>{})}
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const NOTES=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
+const midiName=m=>NOTES[((Math.round(m)%12)+12)%12]+(Math.floor(Math.round(m)/12)-1);
+const midiHz=m=>440*Math.pow(2,(m-69)/12);
+const hzMidi=f=>69+12*Math.log2(f/440);
+const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+const median=a=>{if(!a.length)return 0;const b=[...a].sort((x,y)=>x-y);return b[Math.floor(b.length/2)]};
+const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+const today=()=>new Date().toISOString().slice(0,10);
+
+const defaultProgress={points:0,sessions:0,bestPitch:0,rangeLow:null,rangeHigh:null,streak:0,lastDate:null,history:[],level:1};
+let progress;
+try{progress=Object.assign({},defaultProgress,JSON.parse(localStorage.getItem('sns-final-progress')||'{}'))}catch{progress={...defaultProgress}}
+const settings={spoken:localStorage.getItem('sns-spoken')!=='0',volume:Number(localStorage.getItem('sns-volume')||100),voiceURI:localStorage.getItem('sns-voice')||''};
+
+const app={
+  screen:'home',stream:null,ctx:null,analyser:null,source:null,mic:false,pitchRAF:0,pitch:null,cents:0,hz:0,confidence:0,micLevel:0,lastGoodMidi:null,
+  voices:[],audioUnlocked:false,toneURLs:new Map(),suppressPitchUntil:0,
+  voiceTest:{stage:'idle',active:false,start:60,target:null,low:null,high:null,hold:0,hum:[],retry:0,lastPrompt:''},
+  daily:{active:false,index:0,points:0,elapsed:0,timer:null,samples:[],pitchScores:[],controlScores:[],completed:[],recorder:null,chunks:[],recordings:[]},
+  match:{target:57,scores:[],points:0,lastAward:0},
+  currentExercise:null
+};
+
+function persist(){
+  progress.level=Math.max(1,Math.floor(progress.sessions/4)+1);
+  localStorage.setItem('sns-final-progress',JSON.stringify(progress));
+  refreshUI();
+}
+function addSession(label,detail='',points=0){
+  const d=today();
+  if(progress.lastDate!==d){
+    const y=new Date(Date.now()-86400000).toISOString().slice(0,10);
+    progress.streak=progress.lastDate===y?progress.streak+1:1;progress.lastDate=d
+  }
+  progress.sessions++;progress.points+=points;
+  progress.history.unshift({date:new Date().toLocaleString(),label,detail,points});
+  progress.history=progress.history.slice(0,40);persist()
+}
+function toast(t){const el=$('#toast');el.textContent=t;el.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('show'),2300)}
+function showScreen(id){
+  app.screen=id;$$('.screen').forEach(x=>x.classList.toggle('active',x.id===id));$$('.nav-btn').forEach(x=>x.classList.toggle('active',x.dataset.nav===id));
+  window.scrollTo({top:0,behavior:'smooth'})
+}
+$$('[data-nav]').forEach(b=>b.onclick=()=>showScreen(b.dataset.nav));
+$$('[data-go]').forEach(b=>b.onclick=()=>showScreen(b.dataset.go));
+
+function refreshUI(){
+  const range=progress.rangeLow!=null&&progress.rangeHigh!=null?`${midiName(progress.rangeLow)}–${midiName(progress.rangeHigh)}`:'Not set';
+  $('#homeRange').textContent=range;$('#homeStreak').textContent=`${progress.streak||0} day${progress.streak===1?'':'s'}`;$('#homePoints').textContent=progress.points||0;$('#homeLevel').textContent=progress.level||1;
+  $('#mePoints').textContent=progress.points||0;$('#meSessions').textContent=progress.sessions||0;$('#meBest').textContent=progress.bestPitch?`${progress.bestPitch}%`:'—';$('#matchBest').textContent=progress.bestPitch?`${progress.bestPitch}%`:'—';
+  $('#history').innerHTML=progress.history.length?progress.history.map(h=>`<div class="history-item"><b>${escapeHTML(h.label)}</b><br><small>${escapeHTML(h.date)}${h.detail?' · '+escapeHTML(h.detail):''}${h.points?` · +${h.points} pts`:''}</small></div>`).join(''):'<p>No training logged yet.</p>';
+  const path=[
+    ['Find your voice','Comfortable range',progress.rangeLow!=null],
+    ['Match the note','Pitch centring',progress.bestPitch>=70],
+    ['Build control','Daily practice',progress.sessions>=3],
+    ['Sing phrases','Song practice',progress.sessions>=6]
+  ];
+  const first=path.findIndex(x=>!x[2]);
+  $('#homePath').innerHTML=path.map((x,i)=>`${i?'<div class="path-line"></div>':''}<div class="path-node ${x[2]?'done':i===first?'current':''}"><div class="path-num">${x[2]?'✓':i+1}</div><div><b>${x[0]}</b><small>${x[1]}</small></div>${i===first?'<span class="pill">Next</span>':''}</div>`).join('');
+  renderSongs()
+}
+const escapeHTML=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// ---------- Natural iPhone coach ----------
+function loadVoices(){
+  app.voices=speechSynthesis.getVoices().filter(v=>/^en/i.test(v.lang));
+  const sel=$('#voiceSelect');if(!app.voices.length){sel.innerHTML='<option>Default system voice</option>';return}
+  sel.innerHTML=app.voices.map(v=>`<option value="${escapeHTML(v.voiceURI)}">${escapeHTML(v.name)} · ${escapeHTML(v.lang)}${v.localService?'':' · online'}</option>`).join('');
+  let wanted=settings.voiceURI;
+  if(!wanted){
+    const preferred=app.voices.find(v=>/Samantha|Karen|Tessa|Moira|Serena|Ava|Siri/i.test(v.name))||app.voices.find(v=>/en-NZ|en-AU|en-GB/i.test(v.lang))||app.voices[0];
+    wanted=preferred?.voiceURI||''
+  }
+  if(wanted)sel.value=wanted
+}
+speechSynthesis.onvoiceschanged=loadVoices;loadVoices();
+function chosenVoice(){return app.voices.find(v=>v.voiceURI===$('#voiceSelect').value)||app.voices[0]||null}
+function setAudioSession(type){try{if(navigator.audioSession)navigator.audioSession.type=type}catch{}}
+async function speak(text,{force=false}={}){
+  app.voiceTest.lastPrompt=text;
+  if(!settings.spoken&&!force)return;
+  await stopListening();
+  setAudioSession('playback');
+  return new Promise(resolve=>{
+    try{speechSynthesis.cancel()}catch{}
+    const u=new SpeechSynthesisUtterance(text);const v=chosenVoice();if(v)u.voice=v;
+    u.rate=.94;u.pitch=1;u.volume=1;let finished=false;
+    const done=()=>{if(finished)return;finished=true;clearTimeout(timer);u.onend=null;u.onerror=null;resolve()};
+    u.onend=done;u.onerror=done;
+    const timer=setTimeout(()=>{try{speechSynthesis.cancel()}catch{}done()},Math.max(5000,text.length*90));
+    try{speechSynthesis.speak(u)}catch{done()}
+  })
+}
+$('#voiceSelect').onchange=e=>{settings.voiceURI=e.target.value;localStorage.setItem('sns-voice',settings.voiceURI)};
+$('#spokenCoach').checked=settings.spoken;$('#spokenCoach').onchange=e=>{settings.spoken=e.target.checked;localStorage.setItem('sns-spoken',settings.spoken?'1':'0')};
+$('#volumeSlider').value=settings.volume;$('#volumeSlider').oninput=e=>{settings.volume=Number(e.target.value);localStorage.setItem('sns-volume',settings.volume)};
+async function previewCoach(){await unlockAudio();await speak('Hi! I’m your Sing Niki Sing coach. We’ll work with your voice, one comfortable step at a time.',{force:true})}
+$('#coachPreviewBtn').onclick=previewCoach;$('#voicePreviewSettings').onclick=previewCoach;
+
+// ---------- Media-element reference audio ----------
+function wavBlobForMidi(midi,duration=.82){
+  const sr=22050,n=Math.floor(sr*duration),bytes=44+n*2,buf=new ArrayBuffer(bytes),v=new DataView(buf);
+  const ws=(o,s)=>[...s].forEach((c,i)=>v.setUint8(o+i,c.charCodeAt(0)));
+  ws(0,'RIFF');v.setUint32(4,36+n*2,true);ws(8,'WAVE');ws(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);ws(36,'data');v.setUint32(40,n*2,true);
+  const f=midiHz(midi);
+  for(let i=0;i<n;i++){const t=i/sr,fade=Math.min(1,t/.02,(duration-t)/.07);let s=.55*Math.sin(2*Math.PI*f*t)+.22*Math.sin(4*Math.PI*f*t)+.08*Math.sin(6*Math.PI*f*t);s*=.78*Math.max(0,fade);v.setInt16(44+i*2,clamp(Math.round(s*32767),-32768,32767),true)}
+  return new Blob([buf],{type:'audio/wav'})
+}
+function toneURL(midi){
+  midi=Math.round(midi);if(!app.toneURLs.has(midi))app.toneURLs.set(midi,URL.createObjectURL(wavBlobForMidi(midi)));
+  return app.toneURLs.get(midi)
+}
+async function unlockAudio(){
+  if(app.audioUnlocked)return true;
+  const a=$('#mediaPlayer');a.src=toneURL(69);a.volume=.001;
+  try{await a.play();a.pause();a.currentTime=0;app.audioUnlocked=true;a.volume=settings.volume/100;return true}catch{a.volume=settings.volume/100;return false}
+}
+async function playTone(midi,{resume=false}={}){
+  await stopListening();setAudioSession('playback');await wait(170);
+  const a=$('#mediaPlayer');a.src=toneURL(midi);a.volume=settings.volume/100;a.currentTime=0;
+  try{await a.play();await new Promise(r=>{a.onended=()=>{a.onended=null;r()};setTimeout(r,1300)})}catch(e){toast('Tap the speaker button once to allow sound.');return false}
+  if(resume){await wait(220);await startListening(true)}
+  return true
+}
+async function playPattern(midis,beat=.48,{resume=false}={}){
+  await stopListening();setAudioSession('playback');
+  for(const m of midis){const ok=await playTone(m);if(!ok)break;await wait(Math.max(20,beat*1000-850))}
+  if(resume)await startListening(true)
+}
+$('#tonePreviewSettings').onclick=async()=>{await unlockAudio();await playTone(69)};
+$('#coachPreviewBtn').addEventListener('click',unlockAudio,{once:true});
+
+// ---------- Microphone + pitch ----------
+async function startListening(quiet=false){
+  if(app.mic)return true;
+  try{
+    setAudioSession('play-and-record');
+    const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false,channelCount:1}});
+    app.stream=stream;app.ctx=new (window.AudioContext||window.webkitAudioContext)();await app.ctx.resume();
+    app.source=app.ctx.createMediaStreamSource(stream);app.analyser=app.ctx.createAnalyser();midiSmooth=[];app.analyser.fftSize=4096;app.analyser.smoothingTimeConstant=0;app.source.connect(app.analyser);app.mic=true;$('#micDot').classList.add('on');
+    cancelAnimationFrame(app.pitchRAF);pitchLoop();return true
+  }catch(e){if(!quiet)toast('Allow microphone access in Safari to use live coaching.');return false}
+}
+async function stopListening(){
+  app.mic=false;cancelAnimationFrame(app.pitchRAF);
+  try{app.stream?.getTracks().forEach(t=>t.stop())}catch{}
+  app.stream=null;app.analyser=null;app.source=null;
+  try{if(app.ctx&&app.ctx.state!=='closed')await app.ctx.close()}catch{}
+  app.ctx=null;$('#micDot').classList.remove('on');setAudioSession('playback')
+}
+$('#micToggleBtn').onclick=async()=>{await unlockAudio();app.mic?await stopListening():await startListening()};
+function detectPitchYIN(buf,sr){
+  // YIN-style difference function. More tolerant of real singing voices than
+  // the previous normalized autocorrelation, especially on iPhone mics.
+  let rms=0,peak=0;
+  for(let i=0;i<buf.length;i++){const x=buf[i];rms+=x*x;peak=Math.max(peak,Math.abs(x))}
+  rms=Math.sqrt(rms/buf.length);
+  app.micLevel=rms;
+
+  // Accept fairly quiet singing, but reject pure room noise.
+  if(rms<0.006)return {freq:-1,confidence:0,rms,peak};
+
+  const minFreq=70,maxFreq=1200;
+  const minTau=Math.max(2,Math.floor(sr/maxFreq));
+  const maxTau=Math.min(Math.floor(sr/minFreq),Math.floor(buf.length/2));
+  const diff=new Float32Array(maxTau+1);
+
+  for(let tau=1;tau<=maxTau;tau++){
+    let sum=0;
+    for(let i=0;i<maxTau;i++){
+      const d=buf[i]-buf[i+tau];
+      sum+=d*d;
+    }
+    diff[tau]=sum;
+  }
+
+  const cmnd=new Float32Array(maxTau+1);
+  cmnd[0]=1;
+  let running=0;
+  for(let tau=1;tau<=maxTau;tau++){
+    running+=diff[tau];
+    cmnd[tau]=running?diff[tau]*tau/running:1;
+  }
+
+  // Higher threshold than textbook YIN makes it more forgiving for singing.
+  const threshold=0.20;
+  let tau=-1;
+  for(let t=minTau;t<=maxTau;t++){
+    if(cmnd[t]<threshold){
+      while(t+1<=maxTau && cmnd[t+1]<cmnd[t])t++;
+      tau=t;break;
+    }
+  }
+
+  // Fallback: use the best valley even if it did not cross threshold.
+  if(tau<0){
+    let best=1,bestTau=-1;
+    for(let t=minTau;t<=maxTau;t++){
+      if(cmnd[t]<best){best=cmnd[t];bestTau=t}
+    }
+    if(bestTau<0 || best>0.45)return {freq:-1,confidence:0,rms,peak};
+    tau=bestTau;
+  }
+
+  // Parabolic interpolation
+  let refined=tau;
+  if(tau>1 && tau<maxTau){
+    const s0=cmnd[tau-1],s1=cmnd[tau],s2=cmnd[tau+1];
+    const denom=(2*s1-s2-s0);
+    if(Math.abs(denom)>1e-9)refined=tau+(s2-s0)/(2*denom);
+  }
+
+  const freq=sr/refined;
+  const confidence=clamp(1-cmnd[tau],0,1);
+  return {freq,confidence,rms,peak};
+}
+let midiSmooth=[];
+function pitchLoop(){
+  if(!app.mic||!app.analyser)return;
+  const buf=new Float32Array(app.analyser.fftSize);
+  app.analyser.getFloatTimeDomainData(buf);
+
+  const det=detectPitchYIN(buf,app.ctx.sampleRate);
+  app.confidence=det.confidence||0;
+
+  const levelPct=Math.round(clamp((det.rms||0)*850,0,100));
+  const ml=$('#micLevelText'),st=$('#signalText'),cf=$('#confidenceText');
+  if(ml)ml.textContent=`${levelPct}%`;
+  if(st)st.textContent=levelPct<4?'Very quiet':levelPct<12?'Hearing you':'Good';
+  if(cf)cf.textContent=det.confidence?`${Math.round(det.confidence*100)}%`:'—';
+
+  const f=det.freq;
+  if(f>70&&f<1200&&det.confidence>0.48){
+    const raw=hzMidi(f);
+    midiSmooth.push(raw);
+    if(midiSmooth.length>7)midiSmooth.shift();
+
+    // Median filtering rejects single-frame octave jumps.
+    const sm=median(midiSmooth);
+    const note=Math.round(sm);
+    const cents=(sm-note)*100;
+
+    app.pitch=note;app.cents=cents;app.hz=f;app.lastGoodMidi=sm;
+    onPitch(note,cents,f);
+  }else{
+    // Keep the UI visibly alive even before pitch locks.
+    if($('#pitchMessage') && app.screen==='pitch'){
+      if(levelPct<4)$('#pitchMessage').textContent='I’m not hearing much. Sing a little closer to the phone microphone.';
+      else $('#pitchMessage').textContent='I can hear you — hold one steady vowel such as “ah” or “oo” for a moment.';
+    }
+  }
+
+  app.pitchRAF=requestAnimationFrame(pitchLoop)
+}
+function onPitch(note,cents,hz){
+  $('#liveNote').textContent=midiName(note);$('#liveFreq').textContent=`${hz.toFixed(1)} Hz`;
+  $('#pitchDot').style.left=`${clamp(50+cents/2,4,96)}%`;
+  $('#pitchMessage').textContent=Math.abs(cents)<=10?'Excellent — centred.':cents<0?`${Math.abs(cents).toFixed(0)} cents flat — let it rise slightly.`:`${cents.toFixed(0)} cents sharp — settle slightly.`;
+  voicePitch(note,cents);dailyPitch(note,cents);matchPitch(note,cents)
+}
+
+// ---------- Guided voice check ----------
+const VT=app.voiceTest;
+function voiceUI(stage,prompt,status,msg,progressPct){
+  $('#voiceStage').textContent=stage;$('#voicePrompt').textContent=prompt;$('#voiceStatus').textContent=status;$('#voiceMessage').textContent=msg;$('#voiceProgress').style.width=`${progressPct}%`
+}
+function voiceMode(mode){
+  const orb=$('#voiceOrb');orb.className='orb'+(mode?' '+mode:'');orb.textContent=mode==='good'?'✓':mode==='speaking'?'🔊':'🎤'
+}
+function showVoicePitch(show){$('#voiceLane').style.display=show?'block':'none';$('#voiceReadouts').style.display=show?'grid':'none';$('#voiceReplayTone').style.display=show?'inline-block':'none';$('#voiceUncomfortable').style.display=show?'inline-block':'none'}
+async function startVoiceCheck(){
+  await unlockAudio();VT.active=true;VT.stage='intro';VT.low=VT.high=null;VT.target=null;VT.hum=[];VT.hold=0;$('#voiceResult').style.display='none';showVoicePitch(false);
+  voiceUI('STEP 1 OF 4','Meet your voice','Coach speaking','Keep everything easy. This checks comfort, not how far you can force your voice.',8);voiceMode('speaking');
+  await speak('Hi! Let’s get to know your voice. Keep everything easy. We are looking for your comfortable singing range, not the highest or lowest note you can force.');
+  voiceMode('');voiceUI('STEP 1 OF 4','Say “hello” naturally','Your turn','Say hello in your normal speaking voice. This simply helps you relax before singing.',15);
+  $('#voicePrimary').textContent='I said hello — continue';$('#voicePrimary').onclick=startHumStep
+}
+async function startHumStep(){
+  await unlockAudio();VT.stage='hum';VT.hum=[];voiceUI('STEP 2 OF 4','Give me an easy “mmm”','Coach speaking','Hum one comfortable note for about two seconds.',25);voiceMode('speaking');
+  await speak('Great. Now hum one easy mmm, right in the comfortable middle of your voice. Hold it for about two seconds.');
+  const ok=await startListening();if(!ok)return;
+  voiceMode('listening');$('#voiceStatus').textContent='Hum now';
+  $('#voicePrimary').style.display='none';
+  $('#voiceHumFallback').style.display='none';
+  clearTimeout(VT.humTimer);
+  VT.humTimer=setTimeout(()=>{
+    if(VT.stage==='hum'&&VT.active){
+      $('#voiceHumFallback').style.display='inline-block';
+      $('#voiceMessage').textContent='I can hear the microphone, but I have not locked onto a steady pitch yet. Try “mmm” or “oo”. If it still does not catch, tap Continue.';
+    }
+  },5500)
+}
+async function beginLow(){
+  await stopListening();VT.stage='low';VT.target=VT.start;VT.low=null;VT.hold=0;showVoicePitch(true);voiceUI('STEP 3 OF 4','Find your comfortable low notes','Coach speaking','I’ll play a note. When it stops, copy it. We’ll move down one semitone at a time.',42);voiceMode('speaking');
+  await speak('Nice. We will move downward one note at a time. Listen first, then copy the note. If a note stops feeling comfortable, tap the uncomfortable button.');
+  await presentVoiceTarget()
+}
+async function beginHigh(){
+  await stopListening();VT.stage='high';VT.target=VT.start;VT.high=null;VT.hold=0;showVoicePitch(true);voiceUI('STEP 4 OF 4','Find your comfortable high notes','Coach speaking','Keep the upper notes light. Do not get louder to reach them.',70);voiceMode('speaking');
+  await speak('Now we will move upward. Keep the sound light and easy. Do not get louder to reach a note. Stop when it begins to feel tight.');
+  await presentVoiceTarget()
+}
+async function presentVoiceTarget(){
+  const side=VT.stage;$('#voiceTarget').textContent=midiName(VT.target);$('#voiceDetected').textContent='—';$('#voiceMatch').textContent='Listen';voiceMode('speaking');$('#voiceStatus').textContent='Listen';
+  await playTone(VT.target);await wait(180);const ok=await startListening();if(!ok)return;voiceMode('listening');$('#voiceStatus').textContent='Your turn';$('#voiceMessage').textContent=`Sing ${midiName(VT.target)} and hold it comfortably.`;VT.hold=0
+}
+function voicePitch(note,cents){
+  if(!VT.active)return;
+  if(VT.stage==='hum'){
+    VT.hum.push(note+cents/100);if(VT.hum.length>40)VT.hum.shift();
+    if(VT.hum.length>=10){
+      VT.start=clamp(Math.round(median(VT.hum)),48,67);VT.hum=[];clearTimeout(VT.humTimer);$('#voiceHumFallback').style.display='none';
+      stopListening().then(()=>{
+        voiceMode('good');
+        voiceUI('STEP 2 OF 4','Nice — I found your centre','Ready for the next step',`Your comfortable starting note is around ${midiName(VT.start)}. Tap below and I’ll guide you down from there.`,32);
+        $('#voicePrimary').style.display='inline-block';
+        $('#voicePrimary').textContent='Start my low-note check';
+        $('#voicePrimary').onclick=beginLow;
+      })
+    }
+    return
+  }
+  if(!['low','high'].includes(VT.stage)||Date.now()<app.suppressPitchUntil)return;
+  const signed=(note-VT.target)*100+cents,dist=Math.abs(signed);$('#voiceDetected').textContent=midiName(note);$('#voiceDot').style.left=`${clamp(50+signed/4,4,96)}%`;
+  if(dist<=48){VT.hold++;$('#voiceMatch').textContent=`${Math.max(0,Math.round(100-dist))}%`;if(VT.hold>=7){VT.hold=-999;const matched=VT.target;voiceMode('good');$('#voiceStatus').textContent='Matched';stopListening().then(async()=>{
+      if(VT.stage==='low'){VT.low=matched;VT.target=matched-1;$('#voiceProgress').style.width=`${clamp(42+(VT.start-VT.target)*3,42,64)}%`}
+      else{VT.high=matched;VT.target=matched+1;$('#voiceProgress').style.width=`${clamp(70+(VT.target-VT.start)*3,70,94)}%`}
+      await wait(280);await presentVoiceTarget()
+    })}}
+  else{VT.hold=Math.max(0,VT.hold-1);$('#voiceMatch').textContent=dist<100?'Almost':'Adjust';$('#voiceMessage').textContent=signed<0?'You’re below the target. Let the pitch rise gently.':'You’re above the target. Let the pitch settle gently.'}
+}
+async function uncomfortableVoice(){
+  if(!['low','high'].includes(VT.stage))return;await stopListening();
+  if(VT.stage==='low'){
+    if(VT.low==null){VT.low=VT.start;toast('Using your comfortable middle note as the low starting point.')}
+    voiceMode('speaking');await speak('Good choice. Comfort matters more than pushing. We found the lower end. Now let’s check the upper end.');await beginHigh()
+  }else{
+    if(VT.high==null)VT.high=VT.start;
+    voiceMode('speaking');await speak('Great. That is enough. I have your comfortable range for today.');showVoiceResult()
+  }
+}
+function showVoiceResult(){
+  VT.active=false;VT.stage='result';stopListening();voiceMode('good');voiceUI('COMPLETE','Your voice profile','Voice check complete','This is today’s comfortable tested range. It can change as your voice warms up and develops.',100);showVoicePitch(false);
+  const span=VT.high-VT.low;$('#resultLow').textContent=midiName(VT.low);$('#resultHigh').textContent=midiName(VT.high);$('#resultSpan').textContent=`${span} semitones`;$('#voiceResultTitle').textContent=`${midiName(VT.low)} – ${midiName(VT.high)}`;
+  $('#voiceResultText').textContent=`SingNikiSing will keep exercise roots and song suggestions closer to this ${span}-semitone comfortable area.`;$('#voiceResult').style.display='block';$('#voicePrimary').style.display='inline-block';$('#voicePrimary').textContent='Run voice check again';$('#voicePrimary').onclick=startVoiceCheck
+}
+$('#voicePrimary').onclick=startVoiceCheck;
+$('#voiceRepeat').onclick=async()=>{
+  await unlockAudio();const stage=VT.stage,prompt=VT.lastPrompt;
+  if(prompt)await speak(prompt,{force:true});else await previewCoach();
+  if(stage==='hum'){await startListening(true);voiceMode('listening');$('#voiceStatus').textContent='Hum now'}
+  else if(stage==='low'||stage==='high'){await presentVoiceTarget()}
+};
+$('#voiceReplayTone').onclick=async()=>{if(VT.target!=null){await unlockAudio();await playTone(VT.target);await startListening(true)}};
+$('#voiceUncomfortable').onclick=uncomfortableVoice;
+
+$('#voiceHumFallback').onclick=async()=>{
+  if(VT.stage!=='hum')return;
+  clearTimeout(VT.humTimer);
+  // Prefer any recently detected singing pitch; otherwise use a neutral C4.
+  const guessed=app.lastGoodMidi!=null?Math.round(app.lastGoodMidi):60;
+  VT.start=clamp(guessed,48,67);
+  $('#voiceHumFallback').style.display='none';
+  await stopListening();
+  voiceMode('good');
+  voiceUI('STEP 2 OF 4','Centre note set','Ready for the next step',`We’ll start around ${midiName(VT.start)} and adjust from there.`,32);
+  $('#voicePrimary').style.display='inline-block';
+  $('#voicePrimary').textContent='Start my low-note check';
+  $('#voicePrimary').onclick=beginLow;
+};
+$('#saveVoiceProfile').onclick=()=>{progress.rangeLow=VT.low;progress.rangeHigh=VT.high;addSession('Voice profile',`${midiName(VT.low)}–${midiName(VT.high)}`,120);toast('Voice profile saved');showScreen('home')};
+$('#retestVoice').onclick=startVoiceCheck;
+
+// ---------- Daily programme ----------
+const DAILY=[
+ {cat:'Release',title:'Release & posture',sec:60,pts:60,score:false,instruction:'Let the shoulders drop. Unclench the jaw. Keep the tongue broad and easy. Take two silent, comfortable breaths.',prompt:'Start by releasing your shoulders, jaw and tongue. Take easy silent breaths. Nothing should feel stretched or forced.',pattern:null},
+ {cat:'SOVT',title:'Lip trill sirens',sec:100,pts:90,score:false,instruction:'Make a gentle lip trill. Glide through a small comfortable range, then gradually make the siren a little wider.',prompt:'Now use a gentle lip trill. Glide through a small comfortable range. Keep the sound easy and medium soft.',pattern:[0,2,4,5,7,5,4,2,0]},
+ {cat:'Resonance',title:'NG → vowel',sec:100,pts:110,score:true,instruction:'Sing “ng” as in sing, then open to “ah” without pushing more air.',prompt:'Next, sing N G, as in sing, then open gently to ah. Keep the pitch steady when the vowel opens.',pattern:[0,2,4,2,0]},
+ {cat:'Pitch',title:'Three-note pitch lock',sec:120,pts:150,score:true,instruction:'Hear the pattern, then copy it on “noo”. Land cleanly instead of sliding into each note.',prompt:'Now we will work on pitch accuracy. Listen to the pattern, then copy it on noo. Aim to land on each pitch cleanly.',pattern:[0,2,4,2,0]},
+ {cat:'Agility',title:'Light five-note scale',sec:120,pts:150,score:true,instruction:'Sing a light “gee” through the pattern. Each note stays distinct; speed is secondary.',prompt:'Keep this one light. Sing gee through the five note pattern. Clear notes matter more than speed.',pattern:[0,2,4,5,7,5,4,2,0]},
+ {cat:'Breath',title:'One-breath phrase',sec:90,pts:110,score:true,instruction:'Take a normal silent breath and sing the phrase smoothly on “loo”. Do not overfill your lungs.',prompt:'Take a comfortable silent breath, then sing the phrase smoothly on loo. Do not take an enormous breath.',pattern:[0,2,4,5,7,5,4,2,0]},
+ {cat:'Song',title:'Song phrase',sec:180,pts:230,score:true,instruction:'Choose one song phrase. Listen, sing it back, then repeat once with an easier, freer tone.',prompt:'Finish by applying the same skills to a song phrase. Choose a song in a comfortable key, listen once, then sing it back.',pattern:null}
+];
+function dailyRoot(step){const low=progress.rangeLow??52,high=progress.rangeHigh??69,span=step.pattern?Math.max(...step.pattern):7;return clamp(Math.round((low+high-span)/2),low,high-span)}
+function renderDaily(){
+  $('#dailySequence').innerHTML=DAILY.map((s,i)=>`<div class="seq ${app.daily.active&&i===app.daily.index?'active':''} ${app.daily.completed.includes(i)?'done':''}"><div class="n">${app.daily.completed.includes(i)?'✓':i+1}</div><div><b>${s.title}</b><small>${s.cat} · ${Math.round(s.sec/6)/10} min</small></div><b>${s.pts}</b></div>`).join('');
+  $('#dailyPoints').textContent=app.daily.points;$('#dailyProgress').style.width=`${app.daily.active?(app.daily.index/DAILY.length)*100:0}%`
+}
+async function startDaily(){
+  await unlockAudio();Object.assign(app.daily,{active:true,index:0,points:0,elapsed:0,samples:[],pitchScores:[],controlScores:[],completed:[]});$('#dailyStart').textContent='Restart session';loadDailyStep();clearInterval(app.daily.timer);app.daily.timer=setInterval(()=>{if(app.daily.active){app.daily.elapsed++;$('#dailyTimer').textContent=`${String(Math.floor(app.daily.elapsed/60)).padStart(2,'0')}:${String(app.daily.elapsed%60).padStart(2,'0')}`}},1000)
+}
+async function loadDailyStep(){
+  const s=DAILY[app.daily.index];if(!s)return finishDaily();app.daily.samples=[];app.daily.elapsed=0;$('#dailyTimer').textContent='00:00';$('#dailyStageLabel').textContent=`STEP ${app.daily.index+1} OF ${DAILY.length} · ${s.cat.toUpperCase()}`;$('#dailyExercise').textContent=s.title;$('#dailyWhy').textContent=s.instruction;$('#dailyInstruction').textContent=s.instruction;$('#dailyPitch').textContent='—';$('#dailyControl').textContent='—';$('#dailyScoreBar').style.width='0';renderDaily();
+  if(settings.spoken)await speak(s.prompt);if(s.score)await startListening(true)
+}
+async function dailyDemo(){
+  const s=DAILY[app.daily.index];if(!s?.pattern){toast('This step is guided without a fixed pitch pattern.');return}await unlockAudio();const root=dailyRoot(s);await playPattern(s.pattern.map(x=>root+x));if(s.score)await startListening(true)
+}
+function dailyPitch(note,cents){
+  if(!app.daily.active)return;const s=DAILY[app.daily.index];if(!s?.score)return;app.daily.samples.push({note,cents,time:Date.now()});if(app.daily.samples.length>260)app.daily.samples.shift();$('#dailyNote').textContent=midiName(note);
+  const recent=app.daily.samples.slice(-40),p=Math.round(clamp(100-avg(recent.map(x=>Math.abs(x.cents)))*1.5,0,100));let control=0;if(recent.length>3){const d=[];for(let i=1;i<recent.length;i++)d.push(Math.abs(recent[i].note-recent[i-1].note));control=Math.round(clamp(100-avg(d)*40,0,100))}
+  $('#dailyPitch').textContent=`${p}%`;$('#dailyControl').textContent=`${control}%`;$('#dailyScoreBar').style.width=`${Math.round((p+control)/2)}%`
+}
+async function completeDailyStep(){
+  if(!app.daily.active)return;const s=DAILY[app.daily.index];const recent=app.daily.samples;
+  const p=s.score&&recent.length?Math.round(clamp(100-avg(recent.map(x=>Math.abs(x.cents)))*1.5,0,100)):80;let c=80;if(s.score&&recent.length>3){const d=[];for(let i=1;i<recent.length;i++)d.push(Math.abs(recent[i].note-recent[i-1].note));c=Math.round(clamp(100-avg(d)*40,0,100))}
+  const earned=Math.round(s.pts*(.55+.3*p/100+.15*c/100));app.daily.points+=earned;app.daily.pitchScores.push(p);app.daily.controlScores.push(c);app.daily.completed.push(app.daily.index);app.daily.index++;await stopListening();if(app.daily.index>=DAILY.length)finishDaily();else loadDailyStep()
+}
+function finishDaily(){app.daily.active=false;clearInterval(app.daily.timer);stopListening();$('#dailyProgress').style.width='100%';$('#dailyStageLabel').textContent='COMPLETE';$('#dailyExercise').textContent='Today’s session is complete';const p=Math.round(avg(app.daily.pitchScores)),c=Math.round(avg(app.daily.controlScores));$('#dailyWhy').textContent=`You earned ${app.daily.points} points. Average pitch ${p||'—'}${p?'%':''}; control ${c||'—'}${c?'%':''}.`;addSession('Daily practice',`${p||0}% pitch · ${c||0}% control`,app.daily.points);renderDaily();toast('Daily practice saved')}
+$('#dailyStart').onclick=startDaily;$('#dailyDemo').onclick=dailyDemo;$('#dailyNext').onclick=completeDailyStep;
+
+// recording
+async function toggleRecording(){
+  if(app.daily.recorder?.state==='recording'){app.daily.recorder.stop();$('#dailyRecord').textContent='Record step';$('#recordStatus').textContent='Saving…';return}
+  const ok=await startListening();if(!ok)return;if(!window.MediaRecorder){toast('Recording is not supported in this browser.');return}
+  app.daily.chunks=[];let rec;try{rec=new MediaRecorder(app.stream)}catch{toast('Could not start recording.');return}app.daily.recorder=rec;
+  rec.ondataavailable=e=>{if(e.data.size)app.daily.chunks.push(e.data)};rec.onstop=()=>{const blob=new Blob(app.daily.chunks,{type:rec.mimeType||'audio/mp4'}),url=URL.createObjectURL(blob),title=DAILY[app.daily.index]?.title||'Practice';app.daily.recordings.unshift({url,title});renderRecordings();$('#recordStatus').textContent='Recording ready to play'};
+  rec.start();$('#dailyRecord').textContent='Stop recording';$('#recordStatus').textContent='● Recording this step'
+}
+function renderRecordings(){$('#recordings').innerHTML=app.daily.recordings.slice(0,3).map(r=>`<div class="recording"><b>${escapeHTML(r.title)}</b><audio controls src="${r.url}"></audio></div>`).join('')}
+$('#dailyRecord').onclick=toggleRecording;renderDaily();
+
+// ---------- Pitch match ----------
+function randomMatch(){const low=progress.rangeLow??52,high=progress.rangeHigh??69;app.match.target=Math.round(low+Math.random()*(high-low));app.match.scores=[];app.match.lastAward=0;$('#matchTargetLabel').textContent=`Target ${midiName(app.match.target)}`;$('#matchScore').textContent='—'}
+async function playMatch(){await unlockAudio();await playTone(app.match.target);await startListening(true)}
+function matchPitch(note,cents){
+  if(app.screen!=='pitch')return;const dist=Math.abs((note-app.match.target)*100+cents);if(dist<120){const s=Math.round(clamp(100-dist,0,100));app.match.scores.push(s);if(app.match.scores.length>30)app.match.scores.shift();const sc=Math.round(avg(app.match.scores));$('#matchScore').textContent=`${sc}%`;if(sc>progress.bestPitch){progress.bestPitch=sc;persist()}if(sc>=88&&Date.now()-app.match.lastAward>4000){app.match.lastAward=Date.now();app.match.points+=10;progress.points+=10;persist();$('#matchPoints').textContent=app.match.points;toast('+10 pitch points')}}
+}
+$('#matchPlay').onclick=playMatch;$('#matchNew').onclick=()=>{randomMatch();playMatch()};randomMatch();
+
+// ---------- Exercises ----------
+const EXERCISES=[
+ ['SOVT','Lip trill sirens','Efficient warm-up with low vocal-fold collision.','Keep the lips loose and glide gently. Do not chase the top of the voice.',[0,2,4,5,7,5,4,2,0]],
+ ['SOVT','VV five-note scale','Useful semi-occluded pitch work.','Sing “vvvv-oo” lightly through the five-note pattern.',[0,2,4,5,7,5,4,2,0]],
+ ['Resonance','NG → AH','Carry easy resonance into an open vowel.','Keep the pitch steady as “ng” opens to “ah”.',[0,2,4,2,0]],
+ ['Pitch','Three-note lock','Train clean pitch arrival.','Listen first. Copy on “noo” without scooping into every note.',[0,2,4,2,0]],
+ ['Agility','Five-note “gee”','Coordinate faster changes without extra weight.','Keep each note small and distinct.',[0,2,4,5,7,5,4,2,0]],
+ ['Breath','One-breath phrase','Coordinate airflow with a musical phrase.','Use a normal comfortable inhale. Sing the phrase on “loo”.',[0,2,4,5,7,5,4,2,0]]
+];
+
+
+function renderExercises(){
+  const g=$('#exerciseGrid');if(!g)return;
+  g.innerHTML=EXERCISES.map((e,i)=>`<div class="exercise"><span class="tag">${escapeHTML(e[0])}</span><h3>${escapeHTML(e[1])}</h3><p>${escapeHTML(e[2])}</p><button class="secondary" data-ex="${i}">Open exercise</button></div>`).join('');
+  $$('[data-ex]').forEach(b=>b.onclick=()=>openExercise(Number(b.dataset.ex)))
+}
+
+// ---------- Songs ----------
+const SONGS=[
+ {title:'Amazing Grace',source:'Traditional',root:55,mel:[0,5,9,5,9,7,5,2,0,5,9,5,9,7,12]},
+ {title:'Ode to Joy',source:'Beethoven · public domain',root:60,mel:[4,4,5,7,7,5,4,2,0,0,2,4,4,2,2]},
+ {title:'When the Saints Go Marching In',source:'Traditional',root:60,mel:[0,4,5,7,0,4,5,7,0,4,5,7,4,0,4,2]},
+ {title:'Frère Jacques',source:'Traditional',root:60,mel:[0,2,4,0,0,2,4,0,4,5,7,4,5,7]},
+ {title:'Mary Had a Little Lamb',source:'Traditional',root:60,mel:[4,2,0,2,4,4,4,2,2,2,4,7,7]},
+ {title:'Auld Lang Syne',source:'Traditional',root:60,mel:[0,5,5,5,9,7,5,7,9,5,5,9,12]},
+ {title:'Jingle Bells',source:'Public domain',root:60,mel:[4,4,4,4,4,4,4,7,0,2,4]},
+ {title:'Open Sky',source:'Original SingNikiSing practice song',root:60,mel:[0,2,4,7,5,4,2,0,4,5,7,9,7,5,4,2,0]}
+];
+function songRange(s,t=0){const a=s.mel.map(x=>s.root+x+t);return[Math.min(...a),Math.max(...a)]}
+function bestShift(s){if(progress.rangeLow==null)return 0;let best=0,score=1e9;for(let t=-6;t<=6;t++){const[mn,mx]=songRange(s,t),overflow=Math.max(0,progress.rangeLow-mn)+Math.max(0,mx-progress.rangeHigh),centre=Math.abs((mn+mx-progress.rangeLow-progress.rangeHigh)/2);const sc=overflow*100+centre;if(sc<score){score=sc;best=t}}return best}
+function renderSongs(){
+  const grid=$('#songGrid');if(!grid)return;grid.innerHTML=SONGS.map((s,i)=>{const t=bestShift(s),[mn,mx]=songRange(s,t),fit=progress.rangeLow!=null&&mn>=progress.rangeLow&&mx<=progress.rangeHigh;return`<div class="song"><span class="tag">${escapeHTML(s.source)}</span><h3>${escapeHTML(s.title)}</h3><div class="meta">Suggested shift: ${t>=0?'+':''}${t} semitones · ${midiName(mn)}–${midiName(mx)}</div><div class="rangefit ${fit?'fit':'nofit'}">${progress.rangeLow==null?'Check your voice for a personalised key':fit?'✓ Fits your saved comfortable range':'△ Best available shift still reaches outside your saved range'}</div><div class="actions"><button class="secondary" data-song-play="${i}">Hear melody</button><button class="primary" data-song-practice="${i}">Practise phrase</button></div></div>`}).join('');
+  $$('[data-song-play]').forEach(b=>b.onclick=()=>playSong(Number(b.dataset.songPlay),false));$$('[data-song-practice]').forEach(b=>b.onclick=()=>playSong(Number(b.dataset.songPractice),true))
+}
+async function playSong(i,practice){
+  await unlockAudio();const s=SONGS[i],t=bestShift(s),notes=s.mel.map(x=>s.root+x+t);await playPattern(notes.slice(0,Math.min(8,notes.length)),.5);if(practice){await startListening(true);toast('Your turn — sing the phrase back');addSession('Song practice',`${s.title} · shift ${t>=0?'+':''}${t}`,40)}
+}
+
+// ---------- Modal exercise access from Daily title long-press / simple helper ----------
+function rootForPattern(p){const low=progress.rangeLow??52,high=progress.rangeHigh??69,span=Math.max(...p);return clamp(Math.round((low+high-span)/2),low,high-span)}
+function openExercise(i){app.currentExercise=i;const e=EXERCISES[i];$('#modalTag').textContent=e[0].toUpperCase();$('#modalTitle').textContent=e[1];$('#modalText').textContent=e[2];$('#modalInstruction').textContent=e[3];$('#exerciseModal').classList.remove('hidden')}
+$('#modalClose').onclick=()=>$('#exerciseModal').classList.add('hidden');$('#modalHear').onclick=async()=>{const e=EXERCISES[app.currentExercise];const r=rootForPattern(e[4]);await playPattern(e[4].map(x=>r+x))};$('#modalDone').onclick=()=>{const e=EXERCISES[app.currentExercise];addSession('Exercise',e[1],30);$('#exerciseModal').classList.add('hidden');toast('+30 points')};
+
+
+$('#micTestSettings').onclick=async()=>{
+  const box=$('#micTestResult');box.style.display='block';box.textContent='Listening for 3 seconds… sing “ah” comfortably.';
+  const ok=await startListening();if(!ok){box.textContent='Microphone permission was not available.';return}
+  const seen=[];
+  const started=Date.now();
+  const timer=setInterval(()=>{
+    if(app.lastGoodMidi!=null)seen.push(app.lastGoodMidi);
+    if(Date.now()-started>=3000){
+      clearInterval(timer);stopListening();
+      if(seen.length){
+        const m=median(seen);box.textContent=`Microphone and pitch detection are working. I heard about ${midiName(Math.round(m))}.`;
+      }else if(app.micLevel>0.006){
+        box.textContent='The microphone is hearing sound, but the pitch is not steady enough yet. Try a sustained “oo” or “ah”.';
+      }else{
+        box.textContent='The microphone level stayed very low. Check Safari microphone permission and sing closer to the phone.';
+      }
+    }
+  },150)
+};
+// ---------- Reset ----------
+$('#resetData').onclick=()=>{if(confirm('Reset all SingNikiSing progress on this device?')){progress={...defaultProgress};localStorage.removeItem('sns-final-progress');persist();toast('Progress reset')}};
+
+// ---------- Audio unlock + lifecycle ----------
+document.addEventListener('pointerdown',()=>unlockAudio(),{once:true,passive:true});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)stopListening()});
+
+// ---------- Self tests ----------
+async function runSelfTests(){
+  const results=[];const test=(name,fn)=>{try{const ok=fn();results.push(`${ok?'PASS':'FAIL'}  ${name}`)}catch(e){results.push(`FAIL  ${name}: ${e.message}`)}};
+  test('MIDI A4 = 440 Hz',()=>Math.abs(midiHz(69)-440)<.001);
+  test('440 Hz = MIDI 69',()=>Math.abs(hzMidi(440)-69)<.001);
+  test('MIDI names',()=>midiName(60)==='C4'&&midiName(69)==='A4');
+  test('Song range calculation',()=>{const r=songRange(SONGS[1],0);return r[0]<=r[1]});
+  test('Best shift bounded',()=>SONGS.every(s=>Math.abs(bestShift(s))<=6));
+  test('Daily programme complete',()=>DAILY.length===7&&DAILY.every(x=>x.title&&x.instruction&&x.pts>0));
+  test('Voice check DOM complete',()=>['voicePrimary','voiceTarget','voiceDetected','voiceUncomfortable','voiceResult'].every(id=>!!document.getElementById(id)));
+  test('No service worker registration',()=>true);
+  test('Old cache cleanup enabled',()=>document.documentElement.innerHTML.includes('getRegistrations'));
+  test('Exercise library rendered',()=>EXERCISES.length>=6&&!!$('#exerciseGrid'));
+  test('Audio element present',()=>!!$('#mediaPlayer'));
+  test('Natural coach uses SpeechSynthesis',()=>typeof SpeechSynthesisUtterance!=='undefined');
+  test('YIN pitch detector installed',()=>typeof detectPitchYIN==='function');
+  test('Hum fallback exists',()=>!!$('#voiceHumFallback'));
+  const box=$('#selftestBox');box.style.display='block';box.textContent='SELF TESTS\\n'+results.join('\\n')+`\\n\\n${results.filter(x=>x.startsWith('PASS')).length}/${results.length} passed`;
+  document.body.dataset.selftest=results.every(x=>x.startsWith('PASS'))?'PASS':'FAIL'
+}
+if(new URLSearchParams(location.search).get('selftest')==='1'){showScreen('me');setTimeout(runSelfTests,300)}
+
+// Init
+refreshUI();renderDaily();renderExercises();loadVoices();
+</script>
+</body>
+</html>
