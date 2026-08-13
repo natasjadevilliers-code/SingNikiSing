@@ -103,3 +103,33 @@ select { background:#111827; color:white; border:1px solid var(--border); paddin
   .topbar .primary { padding:10px 12px; }
   .range-readout { grid-template-columns:1fr; }
 }
+
+.daily-hero{display:flex;align-items:center;justify-content:space-between;gap:20px}
+.daily-score{min-width:110px;text-align:center;padding:18px;border-radius:18px;background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.25)}
+.daily-score strong{display:block;font-size:2rem}
+.daily-score span{color:var(--muted);font-size:.85rem}
+.daily-layout{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr);gap:16px}
+.daily-progress{height:12px;background:rgba(255,255,255,.06);border-radius:999px;overflow:hidden;margin:16px 0}
+.daily-progress>div{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .25s ease}
+.daily-timer{font-size:3rem;font-weight:900;letter-spacing:.04em;margin:8px 0}
+.daily-instruction{padding:15px;border-radius:14px;background:rgba(255,255,255,.045);line-height:1.6}
+.daily-live-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+.daily-live-grid>div{background:rgba(255,255,255,.035);padding:12px;border-radius:12px}
+.daily-live-grid small{display:block;color:var(--muted)}
+.daily-live-grid strong{display:block;font-size:1.25rem;margin-top:4px}
+.daily-sequence{display:grid;gap:9px}
+.daily-step{display:grid;grid-template-columns:30px 1fr auto;gap:10px;align-items:center;padding:10px;border-radius:12px;background:rgba(255,255,255,.03)}
+.daily-step.active{outline:1px solid rgba(167,139,250,.55);background:rgba(167,139,250,.08)}
+.daily-step.done{opacity:.68}
+.daily-step .num{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:#25324e;font-weight:800}
+.daily-step small{color:var(--muted)}
+.recording-status{margin-top:12px;color:#d8b4fe;font-weight:700}
+.recordings-list{display:grid;gap:10px;margin-top:15px}
+.recording-item{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px;border-radius:12px;background:rgba(255,255,255,.035)}
+.recording-item audio{max-width:240px;width:100%}
+@media(max-width:760px){
+  .daily-layout{grid-template-columns:1fr}
+  .daily-live-grid{grid-template-columns:1fr}
+  .daily-hero{display:block}
+  .daily-score{margin-top:14px}
+}

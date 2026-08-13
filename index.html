@@ -20,6 +20,7 @@
 
     <nav class="tabs" id="tabs">
       <button class="tab active" data-screen="home">Home</button>
+      <button class="tab" data-screen="daily">Daily Practice</button>
       <button class="tab" data-screen="pitch">Pitch</button>
       <button class="tab" data-screen="range">Range</button>
       <button class="tab" data-screen="warmups">Warm-ups</button>
@@ -37,7 +38,7 @@
             <p>SingWise listens to your pitch, learns your comfortable range, and adapts exercises and song keys to you.</p>
             <div class="hero-actions">
               <button class="primary" data-go="range">Find my vocal range</button>
-              <button class="secondary" data-go="warmups">Start today’s workout</button>
+              <button class="secondary" data-go="daily">Start today’s workout</button>
             </div>
           </div>
           <div class="score-ring">
@@ -61,6 +62,58 @@
             <div><b>5. Song work</b><span>4 min</span><small>Phrase-by-phrase, in your best key</small></div>
           </div>
           <p class="note">Exercises should feel easy and never painful. Stop if you feel pain, persistent hoarseness, or throat strain.</p>
+        </div>
+      </section>
+
+
+      <section class="screen" id="daily">
+        <div class="card daily-hero">
+          <div>
+            <div class="eyebrow">GUIDED DAILY PROGRAMME</div>
+            <h2 id="dailyTitle">Today’s vocal workout</h2>
+            <p id="dailySubtitle">A structured session that moves from release → SOVT → resonance → pitch → agility → song work.</p>
+          </div>
+          <div class="daily-score"><strong id="dailyPoints">0</strong><span>points</span></div>
+        </div>
+
+        <div class="daily-layout">
+          <div class="card">
+            <div class="eyebrow" id="dailyStage">READY</div>
+            <h2 id="dailyExerciseTitle">Press Start</h2>
+            <p id="dailyExerciseWhy">SingWise will guide you through the full practice in order.</p>
+            <div class="daily-progress"><div id="dailyProgressBar"></div></div>
+            <div class="daily-timer" id="dailyTimer">00:00</div>
+            <div class="daily-instruction" id="dailyInstruction">
+              For best results, use the microphone and practise somewhere reasonably quiet.
+            </div>
+            <div class="daily-live-grid">
+              <div><small>Live note</small><strong id="dailyLiveNote">—</strong></div>
+              <div><small>Pitch stability</small><strong id="dailyStability">—</strong></div>
+              <div><small>Pitch score</small><strong id="dailyPitchScore">—</strong></div>
+            </div>
+            <div class="hero-actions">
+              <button class="primary" id="dailyStart">Start daily practice</button>
+              <button class="secondary" id="dailyPlayDemo">Play exercise</button>
+              <button class="secondary" id="dailyRecordBtn">Record this step</button>
+              <button class="secondary" id="dailyNext">Next step</button>
+            </div>
+            <div class="recording-status" id="recordingStatus">Not recording</div>
+          </div>
+
+          <div class="card">
+            <h3>Today’s sequence</h3>
+            <div id="dailySequence" class="daily-sequence"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Session score</h3>
+          <div class="grid three">
+            <div class="stat"><span>Pitch accuracy</span><strong id="sessionPitch">—</strong></div>
+            <div class="stat"><span>Control</span><strong id="sessionControl">—</strong></div>
+            <div class="stat"><span>Completed</span><strong id="sessionCompleted">0/0</strong></div>
+          </div>
+          <div id="recordingsList" class="recordings-list"></div>
         </div>
       </section>
 

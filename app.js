@@ -17,7 +17,11 @@ const state = {
   rangeObserved: [],
   earDirection: null,
   intervalTarget: null,
-  progress: JSON.parse(localStorage.getItem('singwiseProgress') || '{"sessions":0,"bestPitch":0,"history":[],"rangeLow":null,"rangeHigh":null,"streak":0,"lastDate":null}')
+  progress: JSON.parse(localStorage.getItem('singwiseProgress') || '{"sessions":0,"bestPitch":0,"history":[],"rangeLow":null,"rangeHigh":null,"streak":0,"lastDate":null}'),
+  daily: {started:false,index:0,points:0,completed:[],pitchSamples:[],stabilitySamples:[],stepSamples:[],timer:null,elapsed:0},
+  recorder: null,
+  recordingChunks: [],
+  recordings: []
 };
 
 const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -114,6 +118,7 @@ function pitchLoop(){
     const nearest = Math.round(sm);
     const cents = (sm-nearest)*100;
     state.liveMidi=nearest; state.liveCents=cents; state.liveHz=f;
+    dailyLiveSample(nearest,cents);
     $('#liveNote').textContent = midiToName(nearest);
     $('#liveFreq').textContent = `${f.toFixed(1)} Hz`;
     $('#needle').style.left = `${Math.max(0,Math.min(100,50+cents/2))}%`;
@@ -128,21 +133,32 @@ function pitchLoop(){
   requestAnimationFrame(pitchLoop);
 }
 
-function playTone(midi,duration=.65,delay=0){
-  state.audioCtx ||= new (window.AudioContext||window.webkitAudioContext)();
-  const t = state.audioCtx.currentTime + delay;
-  const o = state.audioCtx.createOscillator(), g = state.audioCtx.createGain();
+async function ensureAudio(){
+  if(!state.audioCtx){
+    state.audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  }
+  if(state.audioCtx.state === 'suspended'){
+    try { await state.audioCtx.resume(); } catch(e) {}
+  }
+  return state.audioCtx;
+}
+
+async function playTone(midi,duration=.65,delay=0){
+  const ctx = await ensureAudio();
+  const t = ctx.currentTime + delay;
+  const o = ctx.createOscillator(), g = ctx.createGain();
   o.type='sine'; o.frequency.value=midiToFreq(midi);
   g.gain.setValueAtTime(0.0001,t);
-  g.gain.exponentialRampToValueAtTime(.18,t+.03);
+  g.gain.exponentialRampToValueAtTime(.28,t+.03);
   g.gain.exponentialRampToValueAtTime(.0001,t+duration);
-  o.connect(g).connect(state.audioCtx.destination); o.start(t); o.stop(t+duration+.05);
+  o.connect(g).connect(ctx.destination); o.start(t); o.stop(t+duration+.05);
 }
-function playPattern(midis, beat=.5){
+async function playPattern(midis, beat=.5){
+  await ensureAudio();
   midis.forEach((m,i)=>playTone(m,beat*.85,i*beat));
 }
 
-$('#playTarget').onclick=()=>playTone(state.targetMidi);
+$('#playTarget').onclick=async()=>{ await ensureAudio(); playTone(state.targetMidi); };
 $('#newTarget').onclick=()=>{
   const low=state.progress.rangeLow ?? 52, high=state.progress.rangeHigh ?? 69;
   const diff=$('#pitchDifficulty').value;
@@ -244,7 +260,8 @@ function openExercise(id){
   $('#exerciseModal').classList.remove('hidden');
 }
 $('#modalClose').onclick=()=>$('#exerciseModal').classList.add('hidden');
-$('#exercisePlay').onclick=()=>{
+$('#exercisePlay').onclick=async()=>{
+  await ensureAudio();
   if(!activeExercise?.pattern) return;
   const low=state.progress.rangeLow ?? 52, high=state.progress.rangeHigh ?? 69;
   const span=Math.max(...activeExercise.pattern);
@@ -257,7 +274,8 @@ $('#exerciseDone').onclick=()=>{
   $('#exerciseModal').classList.add('hidden');
 };
 
-function randomEar(){
+async function randomEar(){
+  await ensureAudio();
   const root=55+Math.floor(Math.random()*10);
   const step=[2,3,4,5,7][Math.floor(Math.random()*5)]*(Math.random()<.5?-1:1);
   state.earDirection=step>0?'up':'down';
@@ -269,7 +287,8 @@ $$('[data-ear]').forEach(b=>b.onclick=()=>{
   $('#earFeedback').textContent=state.earDirection ? (ok?'Correct! Your ear heard the direction.':'Not this time. Replay it and notice where the second note settles.') : 'Press play first.';
   if(ok) markSession('Ear training','Higher/lower');
 });
-$('#intervalPlay').onclick=()=>{
+$('#intervalPlay').onclick=async()=>{
+  await ensureAudio();
   const low=state.progress.rangeLow ?? 52, high=state.progress.rangeHigh ?? 69;
   const root=Math.max(low+2,Math.min(60,high-7));
   const step=[2,3,4,5,7][Math.floor(Math.random()*5)];
@@ -328,7 +347,8 @@ function renderSongs(){
       <button class="primary" data-best-song="${s.id}">Use best key</button>
     </div>`;
   }).join('');
-  $$('[data-play-song]').forEach(b=>b.onclick=()=>{
+  $$('[data-play-song]').forEach(b=>b.onclick=async()=>{
+    await ensureAudio();
     const s=songs.find(x=>x.id===b.dataset.playSong), tr=parseInt($('#globalTranspose').value);
     let time=0;
     s.melody.forEach((x,i)=>{ playTone(s.baseRoot+x+tr,.38, time); time += .42*(s.rhythm[i]||1); });
@@ -349,6 +369,195 @@ $('#autoKey').onclick=()=>{
   renderSongs();
 };
 
+
+const DAILY_PROGRAM = [
+  {kind:'release',title:'Body + jaw release',duration:60,points:50,why:'Release unnecessary tension before you phonate.',instruction:'Roll the shoulders gently. Let the jaw hang loose. Massage the jaw muscles. Rest the tongue wide behind the lower teeth. Take quiet, easy breaths. No big inhalations.',pattern:null,scorePitch:false},
+  {kind:'sovt',title:'Lip trill sirens',duration:120,points:100,why:'Semi-occluded exercises help coordinate airflow and vocal-fold vibration efficiently.',instruction:'Make an easy lip trill and glide through a comfortable part of your range. Keep it light. Do not chase the highest note.',pattern:[0,2,4,5,7,5,4,2,0],scorePitch:false},
+  {kind:'sovt',title:'VV five-note scales',duration:120,points:120,why:'Build steady phonation while keeping the vocal tract partially closed.',instruction:'Sing “vvvv-oo” on 1-2-3-4-5-4-3-2-1. Start in the middle of your comfortable range. Stay medium-soft.',pattern:[0,2,4,5,7,5,4,2,0],scorePitch:true},
+  {kind:'resonance',title:'NG → AH resonance',duration:120,points:120,why:'Move from easy resonance into an open vowel without adding throat pressure.',instruction:'Sing “ng” as in “sing”, then open gently to “ah”. Try to keep the pitch steady as the vowel changes.',pattern:[0,2,4,2,0],scorePitch:true},
+  {kind:'pitch',title:'Pitch-lock drill',duration:150,points:160,why:'Train clean pitch arrival instead of sliding into every note.',instruction:'Listen first, then sing the pattern on “noo”. Try to land on each note immediately and hold the centre.',pattern:[0,2,4,2,0],scorePitch:true},
+  {kind:'agility',title:'Light five-note agility',duration:120,points:140,why:'Improve coordination between notes without pushing extra weight.',instruction:'Sing a light “gee” through the five-note pattern. Keep each note distinct and small. Speed comes after accuracy.',pattern:[0,2,4,5,7,5,4,2,0],scorePitch:true},
+  {kind:'breath',title:'One-breath phrase',duration:90,points:90,why:'Practise planned breathing in a musical phrase instead of breath-holding.',instruction:'Take a comfortable silent breath. Sing the pattern smoothly on “loo” in one breath. Do not overfill the lungs.',pattern:[0,2,4,5,7,5,4,2,0],scorePitch:true},
+  {kind:'song',title:'Song phrase practice',duration:180,points:220,why:'Apply pitch, breath and resonance to actual melody.',instruction:'Choose a song from Song Practice in your suggested key. Work phrase-by-phrase: listen, sing, repeat. Aim for easy tone before volume.',pattern:null,scorePitch:true}
+];
+
+function dailyRootFor(step){
+  const low = state.progress.rangeLow ?? 52, high = state.progress.rangeHigh ?? 69;
+  if(!step.pattern) return 60;
+  const span = Math.max(...step.pattern);
+  let root = Math.round((low+high-span)/2);
+  root = Math.max(low+1, Math.min(root, high-span-1));
+  return root;
+}
+function renderDailySequence(){
+  $('#dailySequence').innerHTML = DAILY_PROGRAM.map((s,i)=>`
+    <div class="daily-step ${i===state.daily.index&&state.daily.started?'active':''} ${state.daily.completed.includes(i)?'done':''}">
+      <div class="num">${state.daily.completed.includes(i)?'✓':i+1}</div>
+      <div><b>${s.title}</b><br><small>${Math.round(s.duration/60*10)/10} min · ${s.kind.toUpperCase()}</small></div>
+      <div>${s.points} pts</div>
+    </div>`).join('');
+  $('#sessionCompleted').textContent = `${state.daily.completed.length}/${DAILY_PROGRAM.length}`;
+}
+function currentDailyStep(){ return DAILY_PROGRAM[state.daily.index]; }
+
+function loadDailyStep(){
+  const s=currentDailyStep();
+  if(!s) return finishDaily();
+  $('#dailyStage').textContent=`STEP ${state.daily.index+1} OF ${DAILY_PROGRAM.length} · ${s.kind.toUpperCase()}`;
+  $('#dailyExerciseTitle').textContent=s.title;
+  $('#dailyExerciseWhy').textContent=s.why;
+  $('#dailyInstruction').textContent=s.instruction;
+  $('#dailyTimer').textContent='00:00';
+  state.daily.elapsed=0;
+  state.daily.stepSamples=[];
+  $('#dailyPitchScore').textContent='—';
+  $('#dailyStability').textContent='—';
+  $('#dailyProgressBar').style.width=`${(state.daily.index/DAILY_PROGRAM.length)*100}%`;
+  renderDailySequence();
+}
+async function startDaily(){
+  if(!state.micEnabled) await enableMic();
+  state.daily={started:true,index:0,points:0,completed:[],pitchSamples:[],stabilitySamples:[],stepSamples:[],timer:null,elapsed:0};
+  state.recordings=[];
+  $('#recordingsList').innerHTML='';
+  $('#dailyPoints').textContent='0';
+  $('#dailyStart').textContent='Restart daily practice';
+  loadDailyStep();
+  startDailyTimer();
+}
+function startDailyTimer(){
+  if(state.daily.timer) clearInterval(state.daily.timer);
+  state.daily.timer=setInterval(()=>{
+    if(!state.daily.started) return;
+    state.daily.elapsed++;
+    const m=String(Math.floor(state.daily.elapsed/60)).padStart(2,'0');
+    const s=String(state.daily.elapsed%60).padStart(2,'0');
+    $('#dailyTimer').textContent=`${m}:${s}`;
+  },1000);
+}
+function playDailyDemo(){
+  const s=currentDailyStep(); if(!s?.pattern) return;
+  const r=dailyRootFor(s);
+  playPattern(s.pattern.map(x=>r+x),.5);
+}
+function calculateStepScore(){
+  const s=currentDailyStep();
+  const samples=state.daily.stepSamples.slice();
+  if(!samples.length || !s.scorePitch) return {pitch:null,control:null,earned:Math.round(s.points*.75)};
+  const cents=samples.map(x=>Math.abs(x.cents)).filter(Number.isFinite);
+  const pitch = cents.length ? Math.round(Math.max(0,100-(cents.reduce((a,b)=>a+b,0)/cents.length)*1.35)) : 0;
+  const mids=samples.map(x=>x.midi).filter(Number.isFinite);
+  let control=0;
+  if(mids.length>2){
+    const diffs=[];
+    for(let i=1;i<mids.length;i++) diffs.push(Math.abs(mids[i]-mids[i-1]));
+    const avg=diffs.reduce((a,b)=>a+b,0)/diffs.length;
+    control=Math.round(Math.max(0,100-avg*45));
+  }
+  const earned=Math.round(s.points*(0.45+0.35*(pitch/100)+0.20*(control/100)));
+  return {pitch,control,earned};
+}
+function nextDaily(){
+  if(!state.daily.started) return;
+  const s=currentDailyStep(), result=calculateStepScore();
+  if(!state.daily.completed.includes(state.daily.index)) state.daily.completed.push(state.daily.index);
+  state.daily.points += result.earned;
+  $('#dailyPoints').textContent=state.daily.points;
+  if(result.pitch!=null) state.daily.pitchSamples.push(result.pitch);
+  if(result.control!=null) state.daily.stabilitySamples.push(result.control);
+  state.daily.index++;
+  updateDailySessionStats();
+  if(state.daily.index>=DAILY_PROGRAM.length) finishDaily(); else loadDailyStep();
+}
+function updateDailySessionStats(){
+  const p=state.daily.pitchSamples, c=state.daily.stabilitySamples;
+  $('#sessionPitch').textContent=p.length?`${Math.round(p.reduce((a,b)=>a+b,0)/p.length)}%`:'—';
+  $('#sessionControl').textContent=c.length?`${Math.round(c.reduce((a,b)=>a+b,0)/c.length)}%`:'—';
+  $('#sessionCompleted').textContent=`${state.daily.completed.length}/${DAILY_PROGRAM.length}`;
+}
+function finishDaily(){
+  if(state.daily.timer) clearInterval(state.daily.timer);
+  state.daily.started=false;
+  $('#dailyStage').textContent='SESSION COMPLETE';
+  $('#dailyExerciseTitle').textContent='Great work — today’s practice is complete';
+  $('#dailyExerciseWhy').textContent=`You earned ${state.daily.points} points. Consistency matters more than chasing one perfect score.`;
+  $('#dailyInstruction').textContent='Your session has been added to Progress. Come back tomorrow for another structured workout.';
+  $('#dailyProgressBar').style.width='100%';
+  const p=state.daily.pitchSamples;
+  const avg=p.length?Math.round(p.reduce((a,b)=>a+b,0)/p.length):0;
+  if(avg>state.progress.bestPitch) state.progress.bestPitch=avg;
+  markSession('Daily vocal programme',`${state.daily.points} points${avg?` · ${avg}% pitch`:''}`);
+  renderDailySequence();
+}
+$('#dailyStart').onclick=startDaily;
+$('#dailyPlayDemo').onclick=playDailyDemo;
+$('#dailyNext').onclick=nextDaily;
+
+async function toggleDailyRecording(){
+  if(!state.micEnabled) await enableMic();
+  if(state.recorder && state.recorder.state==='recording'){
+    state.recorder.stop();
+    $('#dailyRecordBtn').textContent='Record this step';
+    $('#recordingStatus').textContent='Saving recording…';
+    return;
+  }
+  if(!window.MediaRecorder || !state.stream){
+    $('#recordingStatus').textContent='Recording is not supported in this browser.';
+    return;
+  }
+  state.recordingChunks=[];
+  let options={};
+  const choices=['audio/mp4','audio/webm;codecs=opus','audio/webm'];
+  const supported=choices.find(t=>MediaRecorder.isTypeSupported?.(t));
+  if(supported) options.mimeType=supported;
+  try{
+    state.recorder=new MediaRecorder(state.stream,options);
+  }catch(e){
+    state.recorder=new MediaRecorder(state.stream);
+  }
+  state.recorder.ondataavailable=e=>{ if(e.data?.size) state.recordingChunks.push(e.data); };
+  state.recorder.onstop=()=>{
+    const type=state.recorder.mimeType || supported || 'audio/webm';
+    const blob=new Blob(state.recordingChunks,{type});
+    const url=URL.createObjectURL(blob);
+    const step=currentDailyStep()?.title || 'Practice';
+    state.recordings.unshift({url,step,type,date:new Date().toLocaleTimeString()});
+    renderRecordings();
+    $('#recordingStatus').textContent='Recording saved on this device for this session.';
+  };
+  state.recorder.start();
+  $('#dailyRecordBtn').textContent='Stop recording';
+  $('#recordingStatus').textContent='● Recording your practice…';
+}
+$('#dailyRecordBtn').onclick=toggleDailyRecording;
+
+function renderRecordings(){
+  $('#recordingsList').innerHTML = state.recordings.length ? state.recordings.map((r,i)=>`
+    <div class="recording-item">
+      <div><b>${r.step}</b><br><small>${r.date}</small></div>
+      <audio controls src="${r.url}"></audio>
+    </div>`).join('') : '';
+}
+renderDailySequence();
+
+function dailyLiveSample(note,cents){
+  if(!state.daily.started || !$('#daily').classList.contains('active')) return;
+  $('#dailyLiveNote').textContent=midiToName(note);
+  state.daily.stepSamples.push({midi:note,cents});
+  if(state.daily.stepSamples.length>450) state.daily.stepSamples.shift();
+  const recent=state.daily.stepSamples.slice(-45);
+  const avgC=recent.reduce((a,x)=>a+Math.abs(x.cents),0)/recent.length;
+  const ps=Math.round(Math.max(0,100-avgC*1.35));
+  $('#dailyPitchScore').textContent=`${ps}%`;
+  if(recent.length>2){
+    const ds=[];
+    for(let i=1;i<recent.length;i++) ds.push(Math.abs(recent[i].midi-recent[i-1].midi));
+    const av=ds.reduce((a,b)=>a+b,0)/ds.length;
+    const st=Math.round(Math.max(0,100-av*45));
+    $('#dailyStability').textContent=`${st}%`;
+  }
+}
+
 $('#resetProgress').onclick=()=>{
   if(confirm('Reset all saved SingWise progress on this device?')){
     state.progress={sessions:0,bestPitch:0,history:[],rangeLow:null,rangeHigh:null,streak:0,lastDate:null};
@@ -357,6 +566,16 @@ $('#resetProgress').onclick=()=>{
 };
 
 refreshProgress();
+
+
+// iPhone/iPad Safari requires audio to be unlocked by a direct user gesture.
+const unlockAudioOnce = async () => {
+  try { await ensureAudio(); } catch(e) {}
+  document.removeEventListener('pointerdown', unlockAudioOnce);
+  document.removeEventListener('touchend', unlockAudioOnce);
+};
+document.addEventListener('pointerdown', unlockAudioOnce, {passive:true});
+document.addEventListener('touchend', unlockAudioOnce, {passive:true});
 
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));

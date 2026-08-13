@@ -29,3 +29,13 @@ For iPhone use, host the folder on an HTTPS service (for example GitHub Pages, N
 
 ## Important
 This is a practice tool, not a medical or clinical voice assessment. Vocal exercises should not hurt.
+
+
+## Daily Coach mode
+- Guided full-session sequence in a sensible training order
+- Live microphone monitoring throughout the session
+- Per-step practice recordings using MediaRecorder where supported
+- Pitch-centering and control scoring during suitable exercises
+- Points awarded per completed step
+- Session totals saved into Progress
+- Recordings are kept only as temporary in-browser session audio unless the user explicitly downloads/saves them
