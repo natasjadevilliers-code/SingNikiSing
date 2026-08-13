@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#111827" />
+  <title>SingWise — Vocal Coach</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">YOUR PERSONAL VOCAL COACH</div>
+        <h1>SingWise</h1>
+      </div>
+      <button id="micBtn" class="primary">Enable microphone</button>
+    </header>
+
+    <nav class="tabs" id="tabs">
+      <button class="tab active" data-screen="home">Home</button>
+      <button class="tab" data-screen="pitch">Pitch</button>
+      <button class="tab" data-screen="range">Range</button>
+      <button class="tab" data-screen="warmups">Warm-ups</button>
+      <button class="tab" data-screen="ear">Ear</button>
+      <button class="tab" data-screen="songs">Songs</button>
+      <button class="tab" data-screen="progress">Progress</button>
+    </nav>
+
+    <main>
+      <section class="screen active" id="home">
+        <div class="hero card">
+          <div>
+            <div class="eyebrow">DAILY TRAINING</div>
+            <h2>Train the voice you actually have.</h2>
+            <p>SingWise listens to your pitch, learns your comfortable range, and adapts exercises and song keys to you.</p>
+            <div class="hero-actions">
+              <button class="primary" data-go="range">Find my vocal range</button>
+              <button class="secondary" data-go="warmups">Start today’s workout</button>
+            </div>
+          </div>
+          <div class="score-ring">
+            <div><span id="homeScore">—</span><small>pitch score</small></div>
+          </div>
+        </div>
+
+        <div class="grid three">
+          <div class="card stat"><span>Comfortable range</span><strong id="homeRange">Not tested</strong></div>
+          <div class="card stat"><span>Practice streak</span><strong id="homeStreak">0 days</strong></div>
+          <div class="card stat"><span>Sessions</span><strong id="homeSessions">0</strong></div>
+        </div>
+
+        <div class="card">
+          <h3>Recommended 15-minute session</h3>
+          <div class="routine">
+            <div><b>1. Release</b><span>1 min</span><small>Jaw, shoulders, silent breath</small></div>
+            <div><b>2. SOVT warm-up</b><span>3 min</span><small>Lip trill / straw-like “vv” sirens</small></div>
+            <div><b>3. Resonance</b><span>3 min</span><small>NG → vowel, gentle 5-note patterns</small></div>
+            <div><b>4. Pitch control</b><span>4 min</span><small>Target notes matched to your range</small></div>
+            <div><b>5. Song work</b><span>4 min</span><small>Phrase-by-phrase, in your best key</small></div>
+          </div>
+          <p class="note">Exercises should feel easy and never painful. Stop if you feel pain, persistent hoarseness, or throat strain.</p>
+        </div>
+      </section>
+
+      <section class="screen" id="pitch">
+        <div class="grid two">
+          <div class="card tuner-card">
+            <div class="eyebrow">LIVE TUNER</div>
+            <div class="note-display" id="liveNote">—</div>
+            <div class="freq" id="liveFreq">0.0 Hz</div>
+            <div class="cents-wrap">
+              <div class="cents-labels"><span>flat</span><span>in tune</span><span>sharp</span></div>
+              <div class="meter"><div class="meter-center"></div><div id="needle" class="needle"></div></div>
+            </div>
+            <div class="feedback" id="pitchFeedback">Enable the microphone and sing a comfortable note.</div>
+          </div>
+
+          <div class="card">
+            <div class="eyebrow">MATCH A NOTE</div>
+            <h3 id="targetLabel">Target: A3</h3>
+            <button class="secondary" id="playTarget">Play target</button>
+            <button class="primary" id="newTarget">New target</button>
+            <div class="accuracy" id="matchAccuracy">Sing the note after you hear it.</div>
+            <div class="mini-controls">
+              <label>Difficulty
+                <select id="pitchDifficulty">
+                  <option value="easy">Beginner</option>
+                  <option value="medium">Intermediate</option>
+                  <option value="hard">Advanced</option>
+                </select>
+              </label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen" id="range">
+        <div class="card">
+          <div class="eyebrow">VOCAL RANGE TEST</div>
+          <h2>Find your comfortable singing range</h2>
+          <p>This test is intentionally conservative. Sing gently. Do not force the very bottom or top of your voice.</p>
+          <div class="range-readout">
+            <div><small>Lowest comfortable</small><strong id="lowRange">—</strong></div>
+            <div><small>Highest comfortable</small><strong id="highRange">—</strong></div>
+            <div><small>Span</small><strong id="rangeSpan">—</strong></div>
+          </div>
+          <div class="range-buttons">
+            <button class="secondary" id="startLow">Test low notes</button>
+            <button class="secondary" id="startHigh">Test high notes</button>
+            <button class="primary" id="saveRange">Save range</button>
+          </div>
+          <div class="feedback" id="rangeFeedback">Start with the low-note test, then the high-note test.</div>
+        </div>
+        <div class="card">
+          <h3>What the app does with your range</h3>
+          <p>Exercises are shifted into your comfortable zone. Songs receive a suggested key so their melody fits you better. Your range is not used to permanently label your “voice type” because timbre, tessitura and training matter too.</p>
+        </div>
+      </section>
+
+      <section class="screen" id="warmups">
+        <div class="card">
+          <div class="eyebrow">GUIDED VOCAL EXERCISES</div>
+          <h2>Choose a focus</h2>
+          <div class="exercise-filters">
+            <button class="chip active" data-filter="all">All</button>
+            <button class="chip" data-filter="release">Release</button>
+            <button class="chip" data-filter="sovt">SOVT</button>
+            <button class="chip" data-filter="resonance">Resonance</button>
+            <button class="chip" data-filter="pitch">Pitch</button>
+            <button class="chip" data-filter="agility">Agility</button>
+            <button class="chip" data-filter="breath">Breath</button>
+          </div>
+        </div>
+        <div id="exerciseList" class="exercise-list"></div>
+      </section>
+
+      <section class="screen" id="ear">
+        <div class="grid two">
+          <div class="card">
+            <div class="eyebrow">EAR TRAINING</div>
+            <h3>Higher or lower?</h3>
+            <p>Listen to two notes and decide whether the second note moved up or down.</p>
+            <button class="secondary" id="earPlay">Play notes</button>
+            <div class="answer-row">
+              <button class="answer" data-ear="down">Lower</button>
+              <button class="answer" data-ear="up">Higher</button>
+            </div>
+            <div class="feedback" id="earFeedback">Press play to begin.</div>
+          </div>
+          <div class="card">
+            <div class="eyebrow">INTERVAL COPYING</div>
+            <h3>Hear it. Copy it.</h3>
+            <p>The app plays a short two-note interval. Sing the second note after hearing both.</p>
+            <button class="secondary" id="intervalPlay">Play interval</button>
+            <button class="primary" id="intervalNew">New interval</button>
+            <div class="feedback" id="intervalFeedback">Enable microphone for live scoring.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen" id="songs">
+        <div class="card">
+          <div class="eyebrow">SONG PRACTICE</div>
+          <h2>Practice songs in a key that fits you</h2>
+          <p>The built-in repertoire uses traditional/public-domain melodies and original practice songs so the app can legally include the notes.</p>
+          <div class="song-toolbar">
+            <label>Your key shift
+              <select id="globalTranspose">
+                <option value="-6">-6</option><option value="-5">-5</option><option value="-4">-4</option>
+                <option value="-3">-3</option><option value="-2">-2</option><option value="-1">-1</option>
+                <option value="0" selected>0</option><option value="1">+1</option><option value="2">+2</option>
+                <option value="3">+3</option><option value="4">+4</option><option value="5">+5</option><option value="6">+6</option>
+              </select>
+            </label>
+            <button class="secondary" id="autoKey">Choose best key for my range</button>
+          </div>
+        </div>
+        <div id="songList" class="song-list"></div>
+      </section>
+
+      <section class="screen" id="progress">
+        <div class="grid three">
+          <div class="card stat"><span>Best pitch accuracy</span><strong id="bestPitch">—</strong></div>
+          <div class="card stat"><span>Saved range</span><strong id="savedRange">—</strong></div>
+          <div class="card stat"><span>Total sessions</span><strong id="totalSessions">0</strong></div>
+        </div>
+        <div class="card">
+          <h3>Training history</h3>
+          <div id="history" class="history"></div>
+          <button class="danger" id="resetProgress">Reset progress</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal hidden" id="exerciseModal">
+    <div class="modal-card">
+      <button class="modal-close" id="modalClose">×</button>
+      <div class="eyebrow" id="modalCategory"></div>
+      <h2 id="modalTitle"></h2>
+      <p id="modalWhy"></p>
+      <div class="instruction" id="modalInstruction"></div>
+      <div class="pattern" id="modalPattern"></div>
+      <div class="modal-actions">
+        <button class="secondary" id="exercisePlay">Play pattern</button>
+        <button class="primary" id="exerciseDone">Mark complete</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

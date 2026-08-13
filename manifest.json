@@ -1,0 +1,9 @@
+{
+  "name": "SingWise \u2014 Vocal Coach",
+  "short_name": "SingWise",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0b1020",
+  "theme_color": "#111827",
+  "description": "Adaptive singing practice with pitch detection, range testing, vocal exercises, ear training and transposable songs."
+}

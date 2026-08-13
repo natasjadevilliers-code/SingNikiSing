@@ -1,0 +1,105 @@
+
+:root {
+  --bg: #0b1020;
+  --panel: #121a2d;
+  --panel2: #172136;
+  --text: #f6f7fb;
+  --muted: #aab2c5;
+  --accent: #a78bfa;
+  --accent2: #f472b6;
+  --good: #34d399;
+  --warn: #fbbf24;
+  --danger: #fb7185;
+  --border: rgba(255,255,255,.09);
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: radial-gradient(circle at top right, #231942 0, var(--bg) 32%, #090d18 100%);
+  color: var(--text); min-height: 100vh;
+}
+button, select { font: inherit; }
+button { cursor: pointer; }
+.app-shell { max-width: 1180px; margin: auto; padding: 20px 18px 70px; }
+.topbar { display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:18px; }
+h1 { margin:2px 0 0; font-size:2rem; }
+h2 { font-size:clamp(1.7rem,4vw,3rem); margin:.3rem 0 .8rem; }
+h3 { margin-top:0; }
+p { color: var(--muted); line-height:1.55; }
+.eyebrow { color:#c4b5fd; letter-spacing:.14em; font-size:.72rem; font-weight:800; }
+.tabs { display:flex; gap:8px; overflow-x:auto; padding:8px 0 16px; scrollbar-width:none; }
+.tab, .chip, .answer {
+  border:1px solid var(--border); background:rgba(255,255,255,.04); color:var(--text); border-radius:999px; padding:10px 14px;
+}
+.tab.active,.chip.active { background:#312e81; border-color:#6d5bd0; }
+.screen { display:none; }
+.screen.active { display:block; }
+.card {
+  background:linear-gradient(145deg, rgba(22,31,52,.95), rgba(14,22,39,.95));
+  border:1px solid var(--border); border-radius:22px; padding:22px; box-shadow:0 16px 50px rgba(0,0,0,.18);
+  margin-bottom:16px;
+}
+.hero { display:grid; grid-template-columns:1fr auto; gap:24px; align-items:center; }
+.hero p { max-width:650px; font-size:1.05rem; }
+.hero-actions,.range-buttons,.answer-row,.modal-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:16px; }
+.primary,.secondary,.danger {
+  border:0; border-radius:12px; padding:12px 16px; font-weight:800;
+}
+.primary { background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#111827; }
+.secondary { background:#25324e; color:white; border:1px solid var(--border); }
+.danger { background:#431c2a; color:#fecdd3; margin-top:14px; }
+.score-ring {
+  width:150px; aspect-ratio:1; border-radius:50%; display:grid; place-items:center;
+  background:conic-gradient(var(--accent) 0 65%, rgba(255,255,255,.07) 65%);
+}
+.score-ring>div { width:116px; aspect-ratio:1; background:#111827; border-radius:50%; display:grid; place-items:center; text-align:center; }
+.score-ring span { font-size:2rem; font-weight:900; display:block; }
+.score-ring small { color:var(--muted); }
+.grid { display:grid; gap:16px; }
+.grid.two { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.grid.three { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.stat span,.stat small { color:var(--muted); display:block; }
+.stat strong { display:block; margin-top:8px; font-size:1.35rem; }
+.routine { display:grid; gap:10px; }
+.routine>div { display:grid; grid-template-columns:1fr auto; gap:4px 12px; padding:12px; border-radius:14px; background:rgba(255,255,255,.035); }
+.routine small { grid-column:1 / -1; color:var(--muted); }
+.note { font-size:.88rem; }
+.tuner-card { text-align:center; }
+.note-display { font-size:5rem; font-weight:900; margin-top:14px; }
+.freq { color:var(--muted); margin-top:-8px; }
+.cents-wrap { margin:30px 0 20px; }
+.cents-labels { display:flex; justify-content:space-between; font-size:.75rem; color:var(--muted); }
+.meter { height:16px; background:linear-gradient(90deg,#7f1d1d,#78350f,#065f46,#78350f,#7f1d1d); border-radius:999px; position:relative; margin-top:8px; }
+.meter-center { position:absolute; width:2px; height:24px; top:-4px; left:50%; background:#fff; opacity:.7; }
+.needle { position:absolute; top:-7px; width:4px; height:30px; background:white; border-radius:4px; left:50%; transition:left .08s linear; box-shadow:0 0 10px white; }
+.feedback { background:rgba(255,255,255,.045); border-radius:12px; padding:14px; margin-top:15px; color:#e5e7eb; }
+.accuracy { margin-top:18px; font-weight:700; color:#d8b4fe; }
+.mini-controls,.song-toolbar { display:flex; gap:12px; flex-wrap:wrap; margin-top:18px; align-items:end; }
+label { color:var(--muted); display:grid; gap:6px; }
+select { background:#111827; color:white; border:1px solid var(--border); padding:10px; border-radius:10px; }
+.range-readout { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:20px 0; }
+.range-readout>div { padding:16px; border-radius:14px; background:rgba(255,255,255,.04); }
+.range-readout small { display:block; color:var(--muted); }
+.range-readout strong { font-size:1.5rem; display:block; margin-top:5px; }
+.exercise-filters { display:flex; gap:8px; overflow-x:auto; }
+.exercise-list,.song-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.exercise-card,.song-card { background:var(--panel); border:1px solid var(--border); border-radius:18px; padding:18px; }
+.exercise-card h3,.song-card h3 { margin:.3rem 0; }
+.tag { display:inline-block; font-size:.72rem; font-weight:800; padding:5px 8px; background:#2e1065; color:#ddd6fe; border-radius:999px; }
+.exercise-meta,.song-meta { color:var(--muted); font-size:.85rem; }
+.exercise-card button,.song-card button { margin-top:12px; }
+.history-item { padding:12px 0; border-bottom:1px solid var(--border); }
+.modal { position:fixed; inset:0; background:rgba(0,0,0,.72); display:grid; place-items:center; padding:18px; z-index:20; }
+.modal.hidden { display:none; }
+.modal-card { max-width:620px; width:100%; background:#111827; border:1px solid var(--border); border-radius:24px; padding:24px; position:relative; }
+.modal-close { position:absolute; top:10px; right:12px; border:0; background:none; color:white; font-size:2rem; }
+.instruction,.pattern { background:rgba(255,255,255,.04); border-radius:14px; padding:14px; margin-top:12px; line-height:1.55; }
+@media(max-width:760px){
+  .hero,.grid.two,.grid.three,.exercise-list,.song-list { grid-template-columns:1fr; }
+  .score-ring { width:120px; }
+  .hero { display:block; }
+  .score-ring { margin:20px auto 0; }
+  .topbar { align-items:flex-start; }
+  .topbar .primary { padding:10px 12px; }
+  .range-readout { grid-template-columns:1fr; }
+}
