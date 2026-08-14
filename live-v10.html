@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f7f7fb">
+<title>SingNikiSing — LIVE v10</title>
+
+<script>
+(function(){
+  try{
+    if('serviceWorker' in navigator){
+      navigator.serviceWorker.getRegistrations().then(function(regs){
+        regs.forEach(function(r){ try{ r.unregister(); }catch(e){} });
+      }).catch(function(){});
+    }
+    if('caches' in window){
+      caches.keys().then(function(keys){
+        return Promise.all(keys.map(function(k){ return caches.delete(k); }));
+      }).catch(function(){});
+    }
+  }catch(e){}
+})();
+</script>
+
+<style>
+:root{
+ --bg:#f7f7fb;--card:#fff;--ink:#23232d;--muted:#747481;--purple:#7357ff;--pink:#ff6fa8;
+ --green:#22b77b;--amber:#e9a33c;--red:#d94f6a;--line:rgba(25,25,40,.08);--shadow:0 12px 36px rgba(35,35,55,.07)
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif}
+body{padding-bottom:96px}
+button,input,select{font:inherit}
+button{cursor:pointer}
+.wrap{max-width:860px;margin:auto;padding:0 16px}
+header{position:sticky;top:0;z-index:20;background:rgba(247,247,251,.94);backdrop-filter:blur(18px);border-bottom:1px solid var(--line);padding:calc(10px + env(safe-area-inset-top)) 0 10px}
+.header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:42px;height:42px;border-radius:14px;background:linear-gradient(145deg,var(--purple),var(--pink));color:#fff;display:grid;place-items:center;font-size:22px;font-weight:900}
+.brand h1{margin:0;font-size:1.35rem}.brand small{display:block;color:var(--muted);font-size:.72rem;margin-top:2px}
+.version{font-size:.72rem;font-weight:850;background:#ede9ff;color:#5e48d6;padding:7px 9px;border-radius:999px}
+.screen{display:none;padding:18px 0}.screen.active{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:19px;box-shadow:var(--shadow);margin-bottom:14px}
+.hero{background:linear-gradient(135deg,#eee9ff,#fff0f6)}
+.eyebrow{font-size:.7rem;letter-spacing:.12em;font-weight:900;color:var(--purple)}
+h2{font-size:clamp(1.75rem,7vw,2.65rem);margin:.35rem 0 .7rem;line-height:1.07}
+h3{margin:.15rem 0 .5rem}
+p{color:var(--muted);line-height:1.5}
+.primary,.secondary,.ghost,.danger{border:0;border-radius:14px;padding:13px 16px;font-weight:850}
+.primary{background:linear-gradient(135deg,var(--purple),#8d74ff);color:#fff}
+.secondary{background:#efedff;color:#5e49d0}
+.ghost{background:#f2f2f6;color:#4f4f5b}
+.danger{background:#fff0f3;color:#c5435f}
+.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}
+.quick-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.quick{border:0;border-radius:21px;padding:17px;color:#fff;text-align:left;min-height:110px}
+.quick b,.quick small{display:block}.quick b{font-size:1.02rem;margin-top:14px}.quick small{opacity:.86;margin-top:4px}
+.quick.practice{background:linear-gradient(145deg,#7159f5,#977fff)}.quick.song{background:linear-gradient(145deg,#fc669f,#ff9190)}.quick.voice{background:linear-gradient(145deg,#438cf6,#67b9fa)}
+.stats,.readouts,.live-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.stat,.readout{background:#f8f8fb;border-radius:15px;padding:12px}.stat small,.readout small{display:block;color:var(--muted)}.stat strong,.readout strong{display:block;margin-top:4px;font-size:1.2rem}
+.bottom{position:fixed;left:0;right:0;bottom:0;z-index:30;background:rgba(255,255,255,.95);backdrop-filter:blur(18px);border-top:1px solid var(--line);padding:7px 8px calc(7px + env(safe-area-inset-bottom))}
+.nav{max-width:860px;margin:auto;display:grid;grid-template-columns:repeat(5,1fr);gap:3px}
+.nav button{border:0;background:transparent;color:#777783;border-radius:13px;padding:8px 4px;font-size:.69rem;font-weight:800}.nav button span{display:block;font-size:1.25rem}.nav button.active{background:#f0edff;color:var(--purple)}
+.orb{width:118px;height:118px;border-radius:50%;margin:18px auto 8px;background:radial-gradient(circle at 35% 30%,#aa98ff,#7357ff);color:#fff;display:grid;place-items:center;font-size:2.6rem;box-shadow:0 18px 40px rgba(115,87,255,.22)}
+.orb.listening{animation:pulse 1.2s infinite}.orb.good{background:radial-gradient(circle at 35% 30%,#75ddb2,#22b77b)}.orb.speaking{background:radial-gradient(circle at 35% 30%,#ffb3cf,#ff6fa8)}
+@keyframes pulse{50%{transform:scale(1.06)}}
+.center{text-align:center}
+.progress{height:8px;background:#ececf2;border-radius:999px;overflow:hidden}.progress>div{height:100%;width:0;background:linear-gradient(90deg,var(--purple),var(--pink));transition:.3s}
+.lane-labels{display:flex;justify-content:space-between;color:var(--muted);font-size:.72rem}
+.lane{height:18px;background:linear-gradient(90deg,#e7edff,#dff4e9,#e7edff);border-radius:999px;position:relative;margin-top:6px}
+.lane:after{content:"";position:absolute;left:50%;top:-3px;width:5px;height:24px;background:var(--purple);border-radius:6px}
+.dot{position:absolute;left:50%;top:50%;width:24px;height:24px;border-radius:50%;background:var(--pink);transform:translate(-50%,-50%);transition:left .08s}
+.levelbar{height:14px;background:#ececf2;border-radius:999px;overflow:hidden}.levelbar>div{height:100%;width:0;background:linear-gradient(90deg,#78ddb4,#7357ff);transition:.1s}
+.diag{border:2px solid #ded7ff;background:linear-gradient(135deg,#fbfaff,#f6f3ff)}
+.diag-status{padding:12px 14px;border-radius:14px;background:#f4f3f8;font-weight:750;line-height:1.45}
+.diag-status.good{background:#e8f8f1;color:#117b52}.diag-status.warn{background:#fff6e8;color:#9d6818}.diag-status.bad{background:#fff0f3;color:#ad3450}
+.meter{margin-top:12px}
+.audio-play{width:100%;margin-top:10px}
+.sequence{display:grid;gap:8px}.seq{display:grid;grid-template-columns:30px 1fr auto;gap:10px;align-items:center;padding:10px;border-radius:13px;background:#f7f7fa}.seq .n{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#e9e9ef;font-weight:850}.seq.active{background:#f2efff;outline:2px solid #ddd6ff}.seq.done .n{background:#d8f4e8;color:#16865a}.seq small{display:block;color:var(--muted)}
+.timer{font-size:2.6rem;font-weight:900;margin:10px 0}
+.song-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.song{background:#fff;border:1px solid var(--line);border-radius:20px;padding:16px}.tag{display:inline-block;font-size:.68rem;font-weight:850;color:#5e49d0;background:#f0edff;padding:5px 8px;border-radius:999px}
+.note-big{text-align:center;font-size:5rem;font-weight:950;color:#4a38b7;line-height:1;margin:12px 0 4px}
+.history-item{padding:11px 0;border-bottom:1px solid var(--line)}.history-item:last-child{border:0}
+.settings-row{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+select{padding:10px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--ink)}
+.toast{position:fixed;bottom:105px;left:50%;transform:translateX(-50%) translateY(18px);opacity:0;background:#252532;color:#fff;padding:10px 14px;border-radius:999px;font-size:.82rem;font-weight:750;z-index:50;transition:.2s;max-width:90%;text-align:center}.toast.show{opacity:1;transform:translateX(-50%)}
+@media(max-width:650px){.quick-grid,.song-grid{grid-template-columns:1fr}.quick{min-height:92px}.stats,.readouts,.live-grid{grid-template-columns:repeat(3,1fr)}}
+</style>
+</head>
+<body>
+<header><div class="wrap header">
+<div class="brand"><div class="logo">♪</div><div><h1>SingNikiSing</h1><small>Your personal vocal coach</small></div></div>
+<div class="version">LIVE v10 • CACHE RESET</div>
+</div></header>
+
+<main class="wrap">
+<section id="home" class="screen active">
+ <div class="card hero"><div class="eyebrow">TODAY</div><h2>Ready to sing?</h2><p>This rebuild uses one microphone engine for diagnostics, pitch training, recording and your voice check.</p></div>
+ <div class="quick-grid">
+  <button class="quick practice" data-go="practice"><span>▶</span><b>Daily practice</b><small>Guided session</small></button>
+  <button class="quick song" data-go="songs"><span>♫</span><b>Sing a song</b><small>Matched to your range</small></button>
+  <button class="quick voice" data-go="voice"><span>↕</span><b>Check my voice</b><small>Guided range test</small></button>
+ </div>
+ <div class="stats">
+  <div class="stat"><small>Range</small><strong id="homeRange">Not set</strong></div>
+  <div class="stat"><small>Sessions</small><strong id="homeSessions">0</strong></div>
+  <div class="stat"><small>Points</small><strong id="homePoints">0</strong></div>
+ </div>
+ <div class="card"><h3>Before training</h3><p>If this is your first launch of v10, open <b>Me → Microphone Diagnostics</b> once. It verifies microphone level, pitch capture and actual recording/playback.</p></div>
+</section>
+
+<section id="voice" class="screen">
+ <div class="card">
+  <div class="eyebrow">GUIDED VOICE CHECK</div><h2 id="voiceTitle">Let’s get to know your voice</h2><p id="voiceText">I’ll guide you one step at a time.</p>
+ </div>
+ <div class="card center">
+  <div class="progress"><div id="voiceProgress"></div></div>
+  <div class="eyebrow" id="voiceStage" style="margin-top:16px">READY</div>
+  <div class="orb" id="voiceOrb">🎤</div>
+  <h2 id="voicePrompt" style="font-size:2rem">Tap Start</h2>
+  <p id="voiceStatus">Keep the test comfortable. Never force a note.</p>
+  <div id="voicePitchArea" style="display:none">
+   <div class="lane-labels"><span>lower</span><span>target</span><span>higher</span></div><div class="lane"><div id="voiceDot" class="dot"></div></div>
+   <div class="readouts" style="margin-top:12px"><div class="readout"><small>Target</small><strong id="voiceTarget">—</strong></div><div class="readout"><small>You</small><strong id="voiceDetected">—</strong></div><div class="readout"><small>Match</small><strong id="voiceMatch">—</strong></div></div>
+  </div>
+  <div class="actions" style="justify-content:center">
+   <button class="primary" id="voiceStart">Start voice check</button>
+   <button class="secondary" id="voiceRepeat">Repeat coach</button>
+   <button class="ghost" id="voiceReplay" style="display:none">Replay note</button>
+   <button class="ghost" id="voiceStopNote" style="display:none">This note is uncomfortable</button>
+   <button class="ghost" id="voiceHumContinue" style="display:none">Continue without hum lock</button>
+  </div>
+ </div>
+ <div id="voiceResult" class="card" style="display:none;background:linear-gradient(135deg,#f1eeff,#fff)">
+  <div class="eyebrow">YOUR PROFILE</div><h2 id="voiceResultTitle">—</h2>
+  <div class="stats"><div class="stat"><small>Low</small><strong id="resultLow">—</strong></div><div class="stat"><small>High</small><strong id="resultHigh">—</strong></div><div class="stat"><small>Span</small><strong id="resultSpan">—</strong></div></div>
+  <div class="actions"><button class="primary" id="saveVoice">Use this profile</button><button class="secondary" id="retestVoice">Test again</button></div>
+ </div>
+</section>
+
+<section id="practice" class="screen">
+ <div class="card"><div class="eyebrow">DAILY COACH</div><h2>Today’s practice</h2><p>Release → efficient warm-up → resonance → pitch → agility → breath → song.</p></div>
+ <div class="card">
+  <div class="progress"><div id="dailyProgress"></div></div>
+  <div class="eyebrow" id="dailyStage" style="margin-top:16px">READY</div><h2 id="dailyTitle" style="font-size:2rem">Press Start</h2>
+  <p id="dailyInstruction">Your coach will guide the sequence.</p><div class="timer" id="dailyTimer">00:00</div>
+  <div class="live-grid"><div class="readout"><small>Live note</small><strong id="dailyNote">—</strong></div><div class="readout"><small>Pitch</small><strong id="dailyPitch">—</strong></div><div class="readout"><small>Control</small><strong id="dailyControl">—</strong></div></div>
+  <div class="actions"><button class="primary" id="dailyStart">Start session</button><button class="secondary" id="dailyExample">Hear example</button><button class="ghost" id="dailyRecord">Record step</button><button class="ghost" id="dailyNext">Complete & next</button></div>
+  <div id="dailyRecording"></div>
+ </div>
+ <div class="card"><h3>Sequence</h3><div id="dailySequence" class="sequence"></div></div>
+</section>
+
+<section id="pitch" class="screen">
+ <div class="card">
+  <div class="eyebrow">LIVE PITCH</div><div id="liveNote" class="note-big">—</div><div id="liveFreq" class="center" style="color:var(--muted)">Turn listening on</div>
+  <div style="margin-top:18px"><div class="lane-labels"><span>flat</span><span>centred</span><span>sharp</span></div><div class="lane"><div id="pitchDot" class="dot"></div></div></div>
+  <div class="readouts" style="margin-top:12px"><div class="readout"><small>Mic level</small><strong id="pitchMic">—</strong></div><div class="readout"><small>Signal</small><strong id="pitchSignal">Waiting</strong></div><div class="readout"><small>Confidence</small><strong id="pitchConfidence">—</strong></div></div>
+  <div class="actions"><button class="primary" id="pitchListen">Turn listening on</button></div>
+  <p id="pitchMessage">Sing a steady “ah” or “oo”.</p>
+ </div>
+ <div class="card"><div class="eyebrow">MATCH A NOTE</div><h3 id="matchLabel">Target A3</h3><div class="actions"><button class="secondary" id="matchPlay">Play target</button><button class="primary" id="matchNew">New target</button></div><div class="stats" style="margin-top:12px"><div class="stat"><small>Score</small><strong id="matchScore">—</strong></div><div class="stat"><small>Best</small><strong id="matchBest">—</strong></div><div class="stat"><small>Points</small><strong id="matchPoints">0</strong></div></div></div>
+</section>
+
+<section id="songs" class="screen">
+ <div class="card"><div class="eyebrow">SONGS</div><h2>Practice in a better key</h2><p>Built-in traditional/public-domain and original practice melodies.</p></div>
+ <div id="songGrid" class="song-grid"></div>
+</section>
+
+<section id="me" class="screen">
+ <div class="stats"><div class="stat"><small>Points</small><strong id="mePoints">0</strong></div><div class="stat"><small>Sessions</small><strong id="meSessions">0</strong></div><div class="stat"><small>Best pitch</small><strong id="meBest">—</strong></div></div>
+
+ <div class="card diag">
+  <div class="eyebrow">MICROPHONE DIAGNOSTICS</div><h2 style="font-size:2rem">Test microphone</h2>
+  <p>This is the first thing to use if pitch or recording does not react.</p>
+  <div class="levelbar"><div id="diagLevelBar"></div></div>
+  <div class="readouts" style="margin-top:12px"><div class="readout"><small>Input level</small><strong id="diagLevel">0%</strong></div><div class="readout"><small>Detected note</small><strong id="diagNote">—</strong></div><div class="readout"><small>Track</small><strong id="diagTrack">Closed</strong></div></div>
+  <div id="diagStatus" class="diag-status" style="margin-top:12px">Tap “Run mic test”, then sing a steady “ah” for 4 seconds.</div>
+  <div class="actions"><button class="primary" id="runMicTest">Run mic test</button><button class="secondary" id="recordMicTest">Record 4 seconds</button></div>
+  <div id="diagRecording"></div>
+ </div>
+
+ <div class="card"><div class="eyebrow">COACH & AUDIO</div><h3>Settings</h3>
+  <div class="settings-row"><div><b>Coach voice</b><small style="display:block;color:var(--muted)">Your iPhone’s installed voices</small></div><select id="voiceSelect"><option>Loading…</option></select></div>
+  <div class="settings-row"><div><b>Spoken coaching</b></div><input id="spokenCoach" type="checkbox" checked></div>
+  <div class="settings-row"><div><b>Reference volume</b></div><input id="volumeSlider" type="range" min="20" max="100" value="100"></div>
+  <div class="actions"><button class="secondary" id="previewVoice">Preview coach</button><button class="secondary" id="previewTone">Preview note</button></div>
+ </div>
+ <div class="card"><div class="eyebrow">HISTORY</div><div id="history"></div></div>
+</section>
+</main>
+
+<nav class="bottom"><div class="nav">
+<button class="active" data-nav="home"><span>⌂</span>For You</button>
+<button data-nav="practice"><span>▶</span>Practice</button>
+<button data-nav="pitch"><span>♪</span>Pitch</button>
+<button data-nav="songs"><span>♫</span>Songs</button>
+<button data-nav="me"><span>●</span>Me</button>
+</div></nav>
+<div id="toast" class="toast"></div>
+<audio id="player" playsinline></audio>
+
+<script>
+'use strict';
+const BUILD='LIVE-v10-cache-reset-2026-08-14';
+if('serviceWorker'in navigator)navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())).catch(()=>{});
+if('caches'in window)caches.keys().then(ks=>Promise.all(ks.map(k=>caches.delete(k)))).catch(()=>{});
+
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const clamp=(n,a,b)=>Math.max(a,Math.min(b,n)),avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0,median=a=>{if(!a.length)return 0;const b=[...a].sort((x,y)=>x-y);return b[Math.floor(b.length/2)]},wait=ms=>new Promise(r=>setTimeout(r,ms));
+const N=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
+const midiName=m=>N[((Math.round(m)%12)+12)%12]+(Math.floor(Math.round(m)/12)-1),midiHz=m=>440*Math.pow(2,(m-69)/12),hzMidi=f=>69+12*Math.log2(f/440);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const defaultProgress={rangeLow:null,rangeHigh:null,points:0,sessions:0,bestPitch:0,history:[]};
+let progress;try{progress=Object.assign({},defaultProgress,JSON.parse(localStorage.getItem('sns-v10')||'{}'))}catch{progress={...defaultProgress}}
+const settings={spoken:localStorage.getItem('sns-v10-spoken')!=='0',volume:Number(localStorage.getItem('sns-v10-volume')||100),voice:localStorage.getItem('sns-v10-voice')||''};
+
+const app={
+ screen:'home',stream:null,ctx:null,source:null,analyser:null,processor:null,silent:null,mic:false,raf:0,lastPCM:0,micLevel:0,lastMidi:null,confidence:0,smooth:[],
+ voices:[],toneURLs:new Map(),voiceTest:{active:false,stage:'idle',start:60,target:null,low:null,high:null,hum:[],hold:0,lastPrompt:'',timer:null},
+ daily:{active:false,index:0,points:0,elapsed:0,timer:null,samples:[],completed:[],recorder:null,chunks:[]},match:{target:57,scores:[],points:0,lastAward:0}
+};
+
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('show'),2200)}
+function save(){localStorage.setItem('sns-v10',JSON.stringify(progress));refresh()}
+function addHistory(label,detail='',points=0){progress.sessions++;progress.points+=points;progress.history.unshift({label,detail,date:new Date().toLocaleString(),points});progress.history=progress.history.slice(0,30);save()}
+function show(id){app.screen=id;$$('.screen').forEach(x=>x.classList.toggle('active',x.id===id));$$('[data-nav]').forEach(x=>x.classList.toggle('active',x.dataset.nav===id));window.scrollTo({top:0,behavior:'smooth'})}
+$$('[data-nav]').forEach(b=>b.onclick=()=>show(b.dataset.nav));$$('[data-go]').forEach(b=>b.onclick=()=>show(b.dataset.go));
+
+function refresh(){
+ const r=progress.rangeLow!=null&&progress.rangeHigh!=null?`${midiName(progress.rangeLow)}–${midiName(progress.rangeHigh)}`:'Not set';
+ $('#homeRange').textContent=r;$('#homeSessions').textContent=progress.sessions;$('#homePoints').textContent=progress.points;$('#mePoints').textContent=progress.points;$('#meSessions').textContent=progress.sessions;$('#meBest').textContent=progress.bestPitch?`${progress.bestPitch}%`:'—';$('#matchBest').textContent=progress.bestPitch?`${progress.bestPitch}%`:'—';
+ $('#history').innerHTML=progress.history.length?progress.history.map(h=>`<div class="history-item"><b>${esc(h.label)}</b><br><small>${esc(h.date)}${h.detail?' · '+esc(h.detail):''}${h.points?` · +${h.points} pts`:''}</small></div>`).join(''):'<p>No training yet.</p>';
+ renderSongs()
+}
+
+// voices
+function loadVoices(){app.voices=speechSynthesis.getVoices().filter(v=>/^en/i.test(v.lang));const sel=$('#voiceSelect');sel.innerHTML=app.voices.length?app.voices.map(v=>`<option value="${esc(v.voiceURI)}">${esc(v.name)} · ${esc(v.lang)}</option>`).join(''):'<option>Default system voice</option>';let want=settings.voice;if(!want){const v=app.voices.find(v=>/Samantha|Karen|Tessa|Moira|Serena|Ava/i.test(v.name))||app.voices.find(v=>/en-NZ|en-AU|en-GB/i.test(v.lang))||app.voices[0];want=v?.voiceURI||''}if(want)sel.value=want}
+speechSynthesis.onvoiceschanged=loadVoices;loadVoices();
+function selectedVoice(){return app.voices.find(v=>v.voiceURI===$('#voiceSelect').value)||app.voices[0]||null}
+async function speak(text,force=false){app.voiceTest.lastPrompt=text;if(!settings.spoken&&!force)return;await stopMic();return new Promise(resolve=>{try{speechSynthesis.cancel()}catch{}const u=new SpeechSynthesisUtterance(text),v=selectedVoice();if(v)u.voice=v;u.rate=.94;u.volume=1;let done=false;const finish=()=>{if(done)return;done=true;clearTimeout(timer);resolve()};u.onend=finish;u.onerror=finish;const timer=setTimeout(()=>{try{speechSynthesis.cancel()}catch{}finish()},Math.max(5000,text.length*85));try{speechSynthesis.speak(u)}catch{finish()}})}
+$('#voiceSelect').onchange=e=>{settings.voice=e.target.value;localStorage.setItem('sns-v10-voice',settings.voice)};$('#spokenCoach').checked=settings.spoken;$('#spokenCoach').onchange=e=>{settings.spoken=e.target.checked;localStorage.setItem('sns-v10-spoken',settings.spoken?'1':'0')};$('#volumeSlider').value=settings.volume;$('#volumeSlider').oninput=e=>{settings.volume=Number(e.target.value);localStorage.setItem('sns-v10-volume',settings.volume)};
+$('#previewVoice').onclick=()=>speak('Hi. I am your Sing Niki Sing coach. We will work one comfortable step at a time.',true);
+
+// tone media
+function wav(m,d=.8){const sr=22050,n=Math.floor(sr*d),b=new ArrayBuffer(44+n*2),v=new DataView(b),ws=(o,s)=>[...s].forEach((c,i)=>v.setUint8(o+i,c.charCodeAt(0)));ws(0,'RIFF');v.setUint32(4,36+n*2,true);ws(8,'WAVE');ws(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);ws(36,'data');v.setUint32(40,n*2,true);const f=midiHz(m);for(let i=0;i<n;i++){const t=i/sr,fade=Math.min(1,t/.02,(d-t)/.06),s=(.58*Math.sin(2*Math.PI*f*t)+.22*Math.sin(4*Math.PI*f*t)+.08*Math.sin(6*Math.PI*f*t))*.78*Math.max(0,fade);v.setInt16(44+i*2,clamp(Math.round(s*32767),-32768,32767),true)}return new Blob([b],{type:'audio/wav'})}
+function toneURL(m){m=Math.round(m);if(!app.toneURLs.has(m))app.toneURLs.set(m,URL.createObjectURL(wav(m)));return app.toneURLs.get(m)}
+async function playTone(m,resume=false){await stopMic();const a=$('#player');a.src=toneURL(m);a.volume=settings.volume/100;try{await a.play();await new Promise(r=>{a.onended=()=>{a.onended=null;r()};setTimeout(r,1300)})}catch{toast('Tap again to allow sound');return false}if(resume)await startMic(true);return true}
+$('#previewTone').onclick=()=>playTone(69);
+
+// pitch detector
+function yin(buf,sr){
+ let rms=0;for(const x of buf)rms+=x*x;rms=Math.sqrt(rms/buf.length);if(rms<.004)return{freq:-1,conf:0,rms};
+ const minT=Math.floor(sr/1200),maxT=Math.min(Math.floor(sr/70),Math.floor(buf.length/2)),diff=new Float32Array(maxT+1);
+ for(let t=1;t<=maxT;t++){let sum=0;for(let i=0;i<maxT;i++){const d=buf[i]-buf[i+t];sum+=d*d}diff[t]=sum}
+ let run=0,cm=new Float32Array(maxT+1);cm[0]=1;for(let t=1;t<=maxT;t++){run+=diff[t];cm[t]=run?diff[t]*t/run:1}
+ let tau=-1;for(let t=minT;t<=maxT;t++){if(cm[t]<.22){while(t+1<=maxT&&cm[t+1]<cm[t])t++;tau=t;break}}
+ if(tau<0){let best=1;for(let t=minT;t<=maxT;t++)if(cm[t]<best){best=cm[t];tau=t}if(best>.48)return{freq:-1,conf:0,rms}}
+ return{freq:sr/tau,conf:clamp(1-cm[tau],0,1),rms}
+}
+function process(buf,sr){
+ if(!app.mic)return;const d=yin(buf,sr);app.micLevel=d.rms||0;app.confidence=d.conf||0;updateDiagLive();
+ if(d.freq>70&&d.freq<1200&&d.conf>.35){const raw=hzMidi(d.freq);app.smooth.push(raw);if(app.smooth.length>7)app.smooth.shift();const sm=median(app.smooth),note=Math.round(sm),c=(sm-note)*100;app.lastMidi=sm;onPitch(note,c,d.freq)}
+}
+function onPitch(note,c,f){
+ $('#liveNote').textContent=midiName(note);$('#liveFreq').textContent=`${f.toFixed(1)} Hz`;$('#pitchDot').style.left=`${clamp(50+c/2,4,96)}%`;$('#pitchMessage').textContent=Math.abs(c)<12?'Centred':c<0?`${Math.abs(c).toFixed(0)} cents flat`:`${c.toFixed(0)} cents sharp`;
+ $('#pitchMic').textContent=`${Math.round(clamp(app.micLevel*900,0,100))}%`;$('#pitchSignal').textContent='Hearing you';$('#pitchConfidence').textContent=`${Math.round(app.confidence*100)}%`;
+ voicePitch(note,c);dailyPitch(note,c);matchPitch(note,c)
+}
+function updateDiagLive(){
+ const pct=Math.round(clamp(app.micLevel*900,0,100));$('#diagLevel').textContent=`${pct}%`;$('#diagLevelBar').style.width=`${pct}%`;if(app.lastMidi!=null)$('#diagNote').textContent=midiName(Math.round(app.lastMidi));
+ const tr=app.stream?.getAudioTracks?.()[0];$('#diagTrack').textContent=tr?`${tr.readyState}${tr.muted?' · muted':''}`:'Closed'
+}
+
+async function startMic(quiet=false){
+ if(app.mic)return true;await stopMic();
+ try{
+  const stream=await navigator.mediaDevices.getUserMedia({audio:true});const tr=stream.getAudioTracks()[0];if(!tr)throw new Error('No audio track');
+  app.stream=stream;app.ctx=new (window.AudioContext||window.webkitAudioContext)();await app.ctx.resume();app.source=app.ctx.createMediaStreamSource(stream);app.mic=true;app.smooth=[];app.lastPCM=0;
+  if(app.ctx.createScriptProcessor){const proc=app.ctx.createScriptProcessor(4096,1,1),silent=app.ctx.createGain();silent.gain.value=.000001;app.source.connect(proc);proc.connect(silent);silent.connect(app.ctx.destination);proc.onaudioprocess=e=>{if(!app.mic)return;const a=e.inputBuffer.getChannelData(0),copy=new Float32Array(a.length);copy.set(a);app.lastPCM=performance.now();process(copy,e.inputBuffer.sampleRate)};app.processor=proc;app.silent=silent}
+  app.analyser=app.ctx.createAnalyser();app.analyser.fftSize=4096;app.source.connect(app.analyser);fallbackLoop();updateDiagLive();return true
+ }catch(e){if(!quiet)toast('Microphone could not open. Check Safari permission.');return false}
+}
+async function stopMic(){app.mic=false;cancelAnimationFrame(app.raf);try{app.processor&&(app.processor.onaudioprocess=null,app.processor.disconnect())}catch{}try{app.silent?.disconnect()}catch{}try{app.analyser?.disconnect()}catch{}try{app.source?.disconnect()}catch{}try{app.stream?.getTracks().forEach(t=>t.stop())}catch{}app.stream=app.processor=app.silent=app.analyser=app.source=null;try{app.ctx&&app.ctx.state!=='closed'&&await app.ctx.close()}catch{}app.ctx=null;updateDiagLive()}
+function fallbackLoop(){if(!app.mic||!app.analyser)return;if(performance.now()-app.lastPCM>500){const b=new Float32Array(app.analyser.fftSize);app.analyser.getFloatTimeDomainData(b);process(b,app.ctx.sampleRate)}app.raf=requestAnimationFrame(fallbackLoop)}
+
+// diagnostics
+$('#runMicTest').onclick=async()=>{
+ const box=$('#diagStatus');box.className='diag-status';box.textContent='Opening microphone…';app.lastMidi=null;app.micLevel=0;
+ const ok=await startMic();if(!ok){box.className='diag-status bad';box.textContent='FAIL: microphone could not open.';return}
+ box.textContent='Sing a steady “ah” for 4 seconds…';const seen=[],levels=[],start=Date.now();
+ const t=setInterval(()=>{if(app.lastMidi!=null)seen.push(app.lastMidi);levels.push(app.micLevel);if(Date.now()-start>=4000){clearInterval(t);const tr=app.stream?.getAudioTracks?.()[0],state=tr?.readyState||'unknown',muted=!!tr?.muted,lev=Math.max(...levels,0),direct=performance.now()-app.lastPCM<800;stopMic();
+  if(seen.length){box.className='diag-status good';box.textContent=`PASS: microphone and pitch detection are working. Heard about ${midiName(Math.round(median(seen)))}. Direct PCM: ${direct?'yes':'fallback'}.`}
+  else if(lev>.004){box.className='diag-status warn';box.textContent=`PARTIAL: microphone hears sound, but no stable musical pitch was detected. Track was ${state}${muted?' and muted':''}. Try “oo” steadily.`}
+  else{box.className='diag-status bad';box.textContent=`FAIL: no usable voice audio reached the app. Track was ${state}${muted?' and Safari reported it muted':''}.`}
+ }},120)
+};
+
+$('#recordMicTest').onclick=async()=>{
+ const box=$('#diagStatus');$('#diagRecording').innerHTML='';const ok=await startMic();if(!ok)return;if(!window.MediaRecorder){box.className='diag-status bad';box.textContent='MediaRecorder is not available in this browser.';return}
+ let rec,ch=[];try{rec=new MediaRecorder(app.stream)}catch{box.className='diag-status bad';box.textContent='Could not create recorder.';return}
+ rec.ondataavailable=e=>{if(e.data.size)ch.push(e.data)};rec.onstop=()=>{const blob=new Blob(ch,{type:rec.mimeType||'audio/mp4'}),url=URL.createObjectURL(blob);$('#diagRecording').innerHTML=`<audio class="audio-play" controls src="${url}"></audio>`;box.className='diag-status good';box.textContent='Recording created. Press play below. If you hear yourself, Safari recording is working.';stopMic()};rec.start();box.textContent='Recording now… sing for 4 seconds.';setTimeout(()=>rec.state==='recording'&&rec.stop(),4000)
+};
+
+// voice test
+const V=app.voiceTest;
+function vUI(stage,prompt,text,pct){$('#voiceStage').textContent=stage;$('#voicePrompt').textContent=prompt;$('#voiceStatus').textContent=text;$('#voiceProgress').style.width=`${pct}%`}
+function vOrb(mode){$('#voiceOrb').className='orb'+(mode?' '+mode:'');$('#voiceOrb').textContent=mode==='good'?'✓':mode==='speaking'?'🔊':'🎤'}
+function vPitchArea(show){$('#voicePitchArea').style.display=show?'block':'none';$('#voiceReplay').style.display=show?'inline-block':'none';$('#voiceStopNote').style.display=show?'inline-block':'none'}
+async function startVoice(){V.active=true;V.stage='intro';V.low=V.high=null;V.hum=[];$('#voiceResult').style.display='none';vPitchArea(false);vUI('STEP 1 OF 4','Meet your voice','Coach speaking',8);vOrb('speaking');await speak('Hi. Let us find your comfortable singing range. Keep everything easy. We are not testing how far you can force your voice.');vOrb('');vUI('STEP 1 OF 4','Say hello naturally','Say hello, then continue.',15);$('#voiceStart').textContent='I said hello — continue';$('#voiceStart').onclick=startHum}
+async function startHum(){V.stage='hum';V.hum=[];vUI('STEP 2 OF 4','Hum one easy note','Coach speaking',25);vOrb('speaking');await speak('Now hum one easy mmm in the comfortable middle of your voice. Hold it for about two seconds.');const ok=await startMic();if(!ok)return;vOrb('listening');$('#voiceStatus').textContent='Hum now';$('#voiceStart').style.display='none';$('#voiceHumContinue').style.display='none';clearTimeout(V.timer);V.timer=setTimeout(()=>{if(V.stage==='hum'){$('#voiceHumContinue').style.display='inline-block';$('#voiceStatus').textContent='Still listening. If it does not lock, tap Continue without hum lock.'}},5000)}
+function voicePitch(note,c){
+ if(!V.active)return;if(V.stage==='hum'){V.hum.push(note+c/100);if(V.hum.length>=8){V.start=clamp(Math.round(median(V.hum)),48,67);clearTimeout(V.timer);$('#voiceHumContinue').style.display='none';stopMic().then(()=>{vOrb('good');vUI('STEP 2 OF 4','Centre found',`Starting around ${midiName(V.start)}. Tap below to continue.`,32);$('#voiceStart').style.display='inline-block';$('#voiceStart').textContent='Start low-note check';$('#voiceStart').onclick=startLow})}return}
+ if(!['low','high'].includes(V.stage))return;const signed=(note-V.target)*100+c,dist=Math.abs(signed);$('#voiceDetected').textContent=midiName(note);$('#voiceDot').style.left=`${clamp(50+signed/4,4,96)}%`;if(dist<=50){V.hold++;$('#voiceMatch').textContent=`${Math.max(0,Math.round(100-dist))}%`;if(V.hold>=6){V.hold=-999;const m=V.target;stopMic().then(async()=>{if(V.stage==='low'){V.low=m;V.target=m-1}else{V.high=m;V.target=m+1}await presentTarget()})}}else{V.hold=Math.max(0,V.hold-1);$('#voiceMatch').textContent=dist<100?'Almost':'Adjust'}
+}
+async function startLow(){V.stage='low';V.target=V.start;V.low=null;vPitchArea(true);vUI('STEP 3 OF 4','Find your low notes','Listen, then copy each note.',44);vOrb('speaking');await speak('We will move downward one note at a time. Listen first, then copy the note. Stop when the next note feels uncomfortable.');await presentTarget()}
+async function startHigh(){V.stage='high';V.target=V.start;V.high=null;vPitchArea(true);vUI('STEP 4 OF 4','Find your high notes','Keep upper notes light.',72);vOrb('speaking');await speak('Now we will move upward. Keep the sound light. Stop if the next note feels tight.');await presentTarget()}
+async function presentTarget(){$('#voiceTarget').textContent=midiName(V.target);$('#voiceDetected').textContent='—';$('#voiceMatch').textContent='Listen';vOrb('speaking');await playTone(V.target);await startMic(true);V.hold=0;vOrb('listening');$('#voiceStatus').textContent=`Your turn — sing ${midiName(V.target)}.`}
+async function stopVoiceNote(){await stopMic();if(V.stage==='low'){if(V.low==null)V.low=V.start;await speak('Good. We found the lower end. Now let us check the upper end.');await startHigh()}else if(V.stage==='high'){if(V.high==null)V.high=V.start;await speak('Great. That is enough.');finishVoice()}}
+function finishVoice(){V.active=false;stopMic();vOrb('good');vUI('COMPLETE','Your voice profile','Voice check complete.',100);vPitchArea(false);const span=V.high-V.low;$('#resultLow').textContent=midiName(V.low);$('#resultHigh').textContent=midiName(V.high);$('#resultSpan').textContent=`${span} semitones`;$('#voiceResultTitle').textContent=`${midiName(V.low)} – ${midiName(V.high)}`;$('#voiceResult').style.display='block'}
+$('#voiceStart').onclick=startVoice;$('#voiceRepeat').onclick=()=>speak(V.lastPrompt||'Keep the test comfortable.',true);$('#voiceReplay').onclick=async()=>{await playTone(V.target);await startMic(true)};$('#voiceStopNote').onclick=stopVoiceNote;$('#voiceHumContinue').onclick=async()=>{clearTimeout(V.timer);V.start=clamp(Math.round(app.lastMidi??60),48,67);await stopMic();vUI('STEP 2 OF 4','Centre set',`Starting around ${midiName(V.start)}.`,32);$('#voiceStart').style.display='inline-block';$('#voiceStart').textContent='Start low-note check';$('#voiceStart').onclick=startLow};$('#saveVoice').onclick=()=>{progress.rangeLow=V.low;progress.rangeHigh=V.high;addHistory('Voice profile',`${midiName(V.low)}–${midiName(V.high)}`,100);toast('Voice profile saved');show('home')};$('#retestVoice').onclick=startVoice;
+
+// daily
+const DAILY=[['Release','Release & posture',60,60,null],['SOVT','Lip trill sirens',90,80,[0,2,4,5,7,5,4,2,0]],['Resonance','NG → AH',100,100,[0,2,4,2,0]],['Pitch','Pitch lock',120,140,[0,2,4,2,0]],['Agility','Five-note scale',120,140,[0,2,4,5,7,5,4,2,0]],['Breath','One-breath phrase',90,100,[0,2,4,5,7,5,4,2,0]],['Song','Song phrase',150,220,null]];
+function renderDaily(){$('#dailySequence').innerHTML=DAILY.map((x,i)=>`<div class="seq ${app.daily.active&&i===app.daily.index?'active':''} ${app.daily.completed.includes(i)?'done':''}"><div class="n">${app.daily.completed.includes(i)?'✓':i+1}</div><div><b>${x[1]}</b><small>${x[0]} · ${Math.round(x[2]/6)/10} min</small></div><b>${x[3]}</b></div>`).join('');$('#dailyProgress').style.width=`${app.daily.active?app.daily.index/DAILY.length*100:0}%`}
+async function startDaily(){Object.assign(app.daily,{active:true,index:0,points:0,elapsed:0,samples:[],completed:[]});clearInterval(app.daily.timer);app.daily.timer=setInterval(()=>{if(app.daily.active){app.daily.elapsed++;$('#dailyTimer').textContent=`${String(Math.floor(app.daily.elapsed/60)).padStart(2,'0')}:${String(app.daily.elapsed%60).padStart(2,'0')}`}},1000);loadDaily()}
+async function loadDaily(){const x=DAILY[app.daily.index];if(!x)return finishDaily();app.daily.samples=[];app.daily.elapsed=0;$('#dailyTimer').textContent='00:00';$('#dailyStage').textContent=`STEP ${app.daily.index+1} OF ${DAILY.length} · ${x[0].toUpperCase()}`;$('#dailyTitle').textContent=x[1];$('#dailyInstruction').textContent=x[4]?'Listen to the example, then copy it comfortably.':'Follow the coach and keep everything easy.';renderDaily();if(x[0]!=='Release')await startMic(true)}
+async function dailyExample(){const x=DAILY[app.daily.index];if(!x?.[4]){toast('No fixed pitch pattern for this step.');return}const low=progress.rangeLow??52,high=progress.rangeHigh??69,span=Math.max(...x[4]),root=clamp(Math.round((low+high-span)/2),low,high-span);for(const off of x[4])await playTone(root+off);await startMic(true)}
+function dailyPitch(note,c){if(!app.daily.active)return;const x=DAILY[app.daily.index];if(!x||x[0]==='Release')return;app.daily.samples.push({note,c});if(app.daily.samples.length>200)app.daily.samples.shift();$('#dailyNote').textContent=midiName(note);const recent=app.daily.samples.slice(-35),ps=Math.round(clamp(100-avg(recent.map(v=>Math.abs(v.c)))*1.5,0,100));let ctrl=0;if(recent.length>3){const ds=[];for(let i=1;i<recent.length;i++)ds.push(Math.abs(recent[i].note-recent[i-1].note));ctrl=Math.round(clamp(100-avg(ds)*40,0,100))}$('#dailyPitch').textContent=`${ps}%`;$('#dailyControl').textContent=`${ctrl}%`}
+async function nextDaily(){const x=DAILY[app.daily.index];app.daily.points+=x[3];app.daily.completed.push(app.daily.index);app.daily.index++;await stopMic();app.daily.index>=DAILY.length?finishDaily():loadDaily()}
+function finishDaily(){app.daily.active=false;clearInterval(app.daily.timer);stopMic();$('#dailyProgress').style.width='100%';$('#dailyStage').textContent='COMPLETE';$('#dailyTitle').textContent='Session complete';addHistory('Daily practice','Guided programme',app.daily.points);renderDaily()}
+$('#dailyStart').onclick=startDaily;$('#dailyExample').onclick=dailyExample;$('#dailyNext').onclick=nextDaily;
+
+// daily recording
+$('#dailyRecord').onclick=async()=>{if(app.daily.recorder?.state==='recording'){app.daily.recorder.stop();return}const ok=await startMic();if(!ok)return;if(!window.MediaRecorder){toast('Recording unavailable');return}let r;try{r=new MediaRecorder(app.stream)}catch{return}app.daily.recorder=r;app.daily.chunks=[];r.ondataavailable=e=>{if(e.data.size)app.daily.chunks.push(e.data)};r.onstop=()=>{const blob=new Blob(app.daily.chunks,{type:r.mimeType||'audio/mp4'}),url=URL.createObjectURL(blob);$('#dailyRecording').innerHTML=`<audio class="audio-play" controls src="${url}"></audio>`;$('#dailyRecord').textContent='Record step';stopMic()};r.start();$('#dailyRecord').textContent='Stop recording'};
+
+// pitch
+$('#pitchListen').onclick=async()=>{if(app.mic){await stopMic();$('#pitchListen').textContent='Turn listening on'}else{await startMic();$('#pitchListen').textContent='Stop listening'}};
+function newMatch(){const low=progress.rangeLow??52,high=progress.rangeHigh??69;app.match.target=Math.round(low+Math.random()*(high-low));app.match.scores=[];$('#matchLabel').textContent=`Target ${midiName(app.match.target)}`;$('#matchScore').textContent='—'}
+async function playMatch(){await playTone(app.match.target);await startMic(true)}
+function matchPitch(note,c){if(app.screen!=='pitch')return;const d=Math.abs((note-app.match.target)*100+c);if(d<120){const sc=Math.round(clamp(100-d,0,100));app.match.scores.push(sc);if(app.match.scores.length>25)app.match.scores.shift();const a=Math.round(avg(app.match.scores));$('#matchScore').textContent=`${a}%`;if(a>progress.bestPitch){progress.bestPitch=a;save()}if(a>=88&&Date.now()-app.match.lastAward>4000){app.match.lastAward=Date.now();app.match.points+=10;progress.points+=10;save();$('#matchPoints').textContent=app.match.points}}}
+$('#matchPlay').onclick=playMatch;$('#matchNew').onclick=()=>{newMatch();playMatch()};newMatch();
+
+// songs
+const SONGS=[['Amazing Grace','Traditional',55,[0,5,9,5,9,7,5,2,0,5,9,5,9,7,12]],['Ode to Joy','Public domain',60,[4,4,5,7,7,5,4,2,0,0,2,4,4,2,2]],['When the Saints','Traditional',60,[0,4,5,7,0,4,5,7,0,4,5,7]],['Open Sky','Original',60,[0,2,4,7,5,4,2,0,4,5,7,9,7,5,4,2,0]]];
+function songRange(s,t=0){const a=s[3].map(x=>s[2]+x+t);return[Math.min(...a),Math.max(...a)]}
+function bestShift(s){if(progress.rangeLow==null)return 0;let best=0,score=1e9;for(let t=-6;t<=6;t++){const[mn,mx]=songRange(s,t),overflow=Math.max(0,progress.rangeLow-mn)+Math.max(0,mx-progress.rangeHigh),centre=Math.abs((mn+mx-progress.rangeLow-progress.rangeHigh)/2),sc=overflow*100+centre;if(sc<score){score=sc;best=t}}return best}
+function renderSongs(){const g=$('#songGrid');g.innerHTML=SONGS.map((s,i)=>{const t=bestShift(s),[mn,mx]=songRange(s,t);return`<div class="song"><span class="tag">${esc(s[1])}</span><h3>${esc(s[0])}</h3><p>${midiName(mn)}–${midiName(mx)} · suggested shift ${t>=0?'+':''}${t}</p><button class="secondary" data-song="${i}">Hear phrase</button></div>`}).join('');$$('[data-song]').forEach(b=>b.onclick=async()=>{const s=SONGS[Number(b.dataset.song)],t=bestShift(s);for(const off of s[3].slice(0,8))await playTone(s[2]+off+t)})}
+
+// init
+refresh();renderDaily();loadVoices();
+</script>
+</body>
+</html>
